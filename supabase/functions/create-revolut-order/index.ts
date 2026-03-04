@@ -15,7 +15,11 @@ const json = (body: unknown, status = 200) =>
   })
 
 // ─── Revolut Merchant API ────────────────────────────────────────────────────
-const REVOLUT_API = 'https://merchant.revolut.com/api'
+// Set REVOLUT_ENV=sandbox in Supabase secrets to use the sandbox (test) environment
+const isSandbox = Deno.env.get('REVOLUT_ENV') === 'sandbox'
+const REVOLUT_API = isSandbox
+  ? 'https://sandbox-merchant.revolut.com/api'
+  : 'https://merchant.revolut.com/api'
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
@@ -56,8 +60,8 @@ serve(async (req: Request) => {
     const revolut = await revolutRes.json()
 
     if (!revolutRes.ok) {
-      console.error('[create-revolut-order] Revolut error:', JSON.stringify(revolut))
-      return json({ error: revolut.message ?? 'Revolut API error' }, revolutRes.status)
+      console.error(`[create-revolut-order] Revolut error (${isSandbox ? 'sandbox' : 'production'}):`, JSON.stringify(revolut))
+      return json({ error: revolut.message ?? 'Revolut API error', detail: revolut }, revolutRes.status)
     }
 
     // ── 2. Persist Revolut order ID + mark payment as pending ─────────────────

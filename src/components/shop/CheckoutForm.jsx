@@ -31,7 +31,10 @@ function useRevolutScript() {
   useEffect(() => {
     if (window.RevolutCheckout) { setReady(true); return }
     const s = document.createElement('script')
-    s.src = 'https://merchant.revolut.com/embed.js'
+    const revolutEnv = import.meta.env.VITE_REVOLUT_ENV
+    s.src = revolutEnv === 'sandbox'
+      ? 'https://sandbox-merchant.revolut.com/embed.js'
+      : 'https://merchant.revolut.com/embed.js'
     s.async = true
     s.onload = () => setReady(true)
     s.onerror = () => { /* Revolut embed script failed to load */ }
