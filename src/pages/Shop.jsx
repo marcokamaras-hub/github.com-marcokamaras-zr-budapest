@@ -25,25 +25,10 @@ const categories = [
   { value: 'bestsellers', label: 'BEST SELLERS'  },
 ]
 
-// Desktop nav: full 17 tabs
+// Desktop nav: 2 utility tabs (category browsing is via Shop By row + section carousels)
 const ALL_CATEGORIES = [
-  { value: 'all',               label: 'ALL PRODUCTS'   },
-  { value: 'bestsellers',       label: 'BEST SELLERS'   },
-  { value: 'Perfume',           label: 'PERFUMES'       },
-  { value: 'Hand cream',        label: 'HAND CREAM'     },
-  { value: 'Body cream',        label: 'BODY CREAM'     },
-  { value: 'Diffuser',          label: 'DIFFUSERS'      },
-  { value: 'Shower gel',        label: 'SHOWER GEL'     },
-  { value: 'Body scrub',        label: 'BODY SCRUB'     },
-  { value: 'Body oil',          label: 'BODY OIL'       },
-  { value: 'Candle',            label: 'CANDLES'        },
-  { value: 'Liquid soap',       label: 'LIQUID SOAP'    },
-  { value: 'Solid soap',        label: 'SOLID SOAP'     },
-  { value: 'Shampoo',           label: 'SHAMPOO'        },
-  { value: 'Hair conditioner',  label: 'CONDITIONER'    },
-  { value: 'Keratin hair mask', label: 'HAIR MASK'      },
-  { value: 'Dead sea salt',     label: 'DEAD SEA SALT'  },
-  { value: 'Giftbox',           label: 'GIFT SETS'      },
+  { value: 'all',         label: 'ALL PRODUCTS' },
+  { value: 'bestsellers', label: 'BEST SELLERS'  },
 ]
 
 // Used only by AllProductsSections carousels — not shown as nav tabs
