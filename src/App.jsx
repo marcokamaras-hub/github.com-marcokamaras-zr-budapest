@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
+import { Analytics } from '@vercel/analytics/react'
 import { queryClient } from '@/lib/queryClient'
 import { LanguageProvider } from '@/lib/i18n'
 
@@ -41,6 +42,7 @@ export default function App() {
         </Routes>
       </Router>
       <Toaster position="bottom-right" richColors />
+      <Analytics />
     </QueryClientProvider>
     </LanguageProvider>
   )
