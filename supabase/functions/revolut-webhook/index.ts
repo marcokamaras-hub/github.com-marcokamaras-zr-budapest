@@ -72,7 +72,14 @@ serve(async (req: Request) => {
 
     const valid = await verifySignature(webhookSecret, body, timestamp, signature)
     if (!valid) {
-      console.warn('[revolut-webhook] Signature mismatch')
+      // Debug: log what we computed vs what Revolut sent
+      const signingInput = `${timestamp}.${body}`
+      const keyData = new TextEncoder().encode(webhookSecret)
+      const msgData = new TextEncoder().encode(signingInput)
+      const key = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+      const rawSig = await crypto.subtle.sign('HMAC', key, msgData)
+      const computed = Array.from(new Uint8Array(rawSig)).map(b => b.toString(16).padStart(2, '0')).join('')
+      console.warn('[revolut-webhook] Signature mismatch — received:', signature, '| computed v1=', computed, '| timestamp:', timestamp, '| secretLen:', webhookSecret.length)
       return new Response('Invalid signature', { status: 401 })
     }
 
