@@ -824,6 +824,25 @@ export default function Shop() {
                 collections={COLLECTIONS}
                 onCollectionSelect={handleCollectionSelect}
               />
+              {/* ── Shop By — below filter panel ── */}
+              <div className="bg-white border border-[#3D4F3D]/10 p-6 space-y-4">
+                <p className="text-[10px] text-[#3D4F3D]/50 tracking-[0.15em] uppercase">{t('shop_by')}</p>
+                <div className="flex flex-col gap-2">
+                  {COLLECTIONS.map(col => (
+                    <button
+                      key={col.key}
+                      onClick={() => handleCollectionSelect(col.key)}
+                      className={`px-3 py-2 text-xs tracking-widest border transition-colors text-left ${
+                        filters.collections[0] === col.key
+                          ? 'bg-[#3D4F3D] text-white border-[#3D4F3D]'
+                          : 'bg-white text-[#3D4F3D] border-[#3D4F3D]/20 hover:border-[#3D4F3D]/60'
+                      }`}
+                    >
+                      {t(`col_${col.key}`)}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div ref={productGridRef}>
