@@ -722,7 +722,7 @@ export default function Shop() {
       <div className="sticky top-0 z-40 bg-[#F5F3F0] border-b border-[#3D4F3D]/10 shadow-sm">
         <div className="px-4 lg:px-8">
           {/* Mobile: 2 tabs */}
-          <div className="md:hidden flex items-center gap-4 py-4 overflow-x-auto scrollbar-hide">
+          <div className="md:hidden flex items-center gap-4 pt-4 pb-2 overflow-x-auto scrollbar-hide">
             {categories.map(cat => (
               <button
                 key={cat.value}
@@ -735,6 +735,22 @@ export default function Shop() {
                 }`}
               >
                 {catLabel(cat.value)}
+              </button>
+            ))}
+          </div>
+          {/* Mobile: category pills row */}
+          <div className="md:hidden flex items-center gap-1.5 pb-3 overflow-x-auto scrollbar-hide">
+            {SECTION_CATS.map(cat => (
+              <button
+                key={cat.value}
+                onClick={() => setFilters(prev => ({ ...prev, category: cat.value, collections: [], priceRange: [0, maxPrice], bestsellersOnly: false, newArrivalsOnly: false }))}
+                className={`flex-shrink-0 px-3 py-1 rounded-full text-[9px] tracking-[0.15em] border transition-colors whitespace-nowrap ${
+                  filters.category === cat.value
+                    ? 'bg-[#3D4F3D] text-white border-[#3D4F3D]'
+                    : 'bg-transparent text-[#3D4F3D]/60 border-[#3D4F3D]/20 hover:border-[#3D4F3D]/50'
+                }`}
+              >
+                {cat.label}
               </button>
             ))}
           </div>
