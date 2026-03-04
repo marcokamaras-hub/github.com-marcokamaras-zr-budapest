@@ -64,6 +64,9 @@ serve(async (req: Request) => {
       return json({ error: revolut.message ?? 'Revolut API error', detail: revolut }, revolutRes.status)
     }
 
+    // Log full Revolut response to diagnose missing public_id
+    console.log('[create-revolut-order] Revolut order response:', JSON.stringify(revolut))
+
     // ── 2. Persist Revolut order ID + mark payment as pending ─────────────────
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -80,8 +83,9 @@ serve(async (req: Request) => {
 
     if (dbErr) console.error('[create-revolut-order] DB error:', dbErr.message)
 
-    // ── 3. Return public_id for the frontend Revolut Pay widget ───────────────
-    return json({ public_id: revolut.public_id, revolut_order_id: revolut.id })
+    // ── 3. Return token for the frontend Revolut Pay widget ───────────────────
+    // Revolut API v2024-09-01 uses "token" field (older versions used "public_id")
+    return json({ public_id: revolut.token ?? revolut.public_id, revolut_order_id: revolut.id })
 
   } catch (err) {
     console.error('[create-revolut-order] Unhandled error:', err)
