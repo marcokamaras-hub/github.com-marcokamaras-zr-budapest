@@ -122,7 +122,12 @@ export default function CheckoutForm({ open, onClose, cart, currency, onOrderSuc
         },
       })
 
-      if (error) throw new Error(error.message)
+      if (error) {
+        // Extract the real error body from Supabase FunctionsHttpError
+        let detail = error.message
+        try { const body = await error.context?.json?.(); detail = body?.error ?? body?.message ?? error.message } catch (_) {}
+        throw new Error(detail)
+      }
       if (data?.error) throw new Error(data.error)
       if (!data?.public_id) throw new Error('No public_id returned from Revolut')
 
@@ -223,7 +228,7 @@ export default function CheckoutForm({ open, onClose, cart, currency, onOrderSuc
   // ── Paying screen (Revolut widget opened in popup) ───────────────────────
   if (step === 'paying') {
     return (
-      <Dialog open={open} onOpenChange={onClose}>
+      <Dialog open={open} onOpenChange={onClose} modal={false}>
         <DialogContent className="sm:max-w-md bg-[#F5F3F0] border-none rounded-none">
           <div className="text-center py-12 space-y-5">
             <Loader2 className="w-10 h-10 animate-spin text-[#3D4F3D] mx-auto" />
