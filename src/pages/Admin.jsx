@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Package, ShoppingCart, Euro, AlertCircle, Plus, Pencil, Search, Clock, Truck, CheckCircle2, XCircle, RefreshCw, LogOut } from 'lucide-react'
+import { Package, ShoppingCart, Euro, AlertCircle, Plus, Pencil, Search, Clock, Truck, CheckCircle2, XCircle, Upload, LogOut } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabaseClient'
@@ -116,7 +116,8 @@ export default function Admin() {
   const [search, setSearch]               = useState('')
   const [productDialog, setProductDialog] = useState({ open: false, product: null })
   const [statusFilter, setStatusFilter]   = useState('all')
-  const [syncing, setSyncing]             = useState(false)
+  const [csvImporting, setCsvImporting]   = useState(false)
+  const csvInputRef = useRef(null)
   const qc = useQueryClient()
 
   const handleSignOut = async () => {
@@ -163,17 +164,51 @@ export default function Admin() {
     else createMutation.mutate(data)
   }
 
-  const handleLightspeedSync = async () => {
-    setSyncing(true)
+  const handleCsvImport = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    e.target.value = ''
+    setCsvImporting(true)
     try {
-      const { data, error } = await supabase.functions.invoke('lightspeed-sync')
-      if (error) throw error
+      const text = await file.text()
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+      if (lines.length < 2) throw new Error('CSV appears empty')
+
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''))
+      const skuIdx   = headers.findIndex(h => ['sku', 'item_code', 'reference', 'code'].includes(h))
+      const eanIdx   = headers.findIndex(h => ['ean', 'barcode', 'upc', 'ean13'].includes(h))
+      const stockIdx = headers.findIndex(h => ['stock', 'quantity', 'qty', 'available', 'inventory'].includes(h))
+
+      if (stockIdx === -1) throw new Error('No stock/quantity column found — expected: stock, quantity, or qty')
+      if (skuIdx === -1 && eanIdx === -1) throw new Error('No SKU or EAN column found — expected: sku, ean, or barcode')
+
+      const rows = lines.slice(1).map(line => {
+        const cols = line.split(',').map(c => c.trim().replace(/"/g, ''))
+        return {
+          sku:   skuIdx  !== -1 ? cols[skuIdx]  : null,
+          ean:   eanIdx  !== -1 ? cols[eanIdx]  : null,
+          stock: parseInt(cols[stockIdx]) || 0,
+        }
+      }).filter(r => r.sku || r.ean)
+
+      const updates = rows.map(row => {
+        const match = products.find(p =>
+          (row.sku && p.sku === row.sku) ||
+          (row.ean && p.ean === row.ean)
+        )
+        return match ? { id: match.id, stock: row.stock } : null
+      }).filter(Boolean)
+
+      const notFound = rows.length - updates.length
+      await Promise.all(updates.map(u =>
+        supabase.from('products').update({ stock: u.stock }).eq('id', u.id)
+      ))
       qc.invalidateQueries({ queryKey: ['admin-products'] })
-      toast.success(`Sync complete — ${data?.products_synced ?? 0} products updated`)
+      toast.success(`Import complete — ${updates.length} updated${notFound ? `, ${notFound} not matched` : ''}`)
     } catch (err) {
-      toast.error(`Sync failed: ${err.message}`)
+      toast.error(`Import failed: ${err.message}`)
     } finally {
-      setSyncing(false)
+      setCsvImporting(false)
     }
   }
 
@@ -197,9 +232,10 @@ export default function Admin() {
             <p className="text-stone-500 text-sm">Zielinski & Rozen — Budapest</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={handleLightspeedSync} disabled={syncing} variant="outline" size="sm" className="gap-2">
-              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Syncing...' : 'Sync Stock'}
+            <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleCsvImport} />
+            <Button onClick={() => csvInputRef.current?.click()} disabled={csvImporting} variant="outline" size="sm" className="gap-2">
+              <Upload className={`w-4 h-4 ${csvImporting ? 'animate-pulse' : ''}`} />
+              {csvImporting ? 'Importing...' : 'Import CSV'}
             </Button>
             <Button onClick={handleSignOut} variant="ghost" size="sm" className="gap-2 text-stone-500 hover:text-red-600">
               <LogOut className="w-4 h-4" />
