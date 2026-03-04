@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_CUGkkIHqiQOU7lRncqfNMHxbrCbo",
+  "orgId": "team_UrMbPmyCQOmQ8TYXg1Pdslu1",
+  "projectName": "zr-budapest",
+  "settings": {
+    "createdAt": 1772412722771,
+    "framework": "vite",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}
