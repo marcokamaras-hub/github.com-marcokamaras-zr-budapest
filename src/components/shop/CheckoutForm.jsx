@@ -10,10 +10,12 @@ import { Loader2, CheckCircle, Store, Truck, Calendar, CreditCard, ArrowLeft } f
 import { format, addDays, nextTuesday, nextFriday } from 'date-fns'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useNavigate } from 'react-router-dom'
 import { createOrder } from '@/api/orders'
 import { supabase } from '@/lib/supabaseClient'
 import { formatPrice } from '@/lib/utils'
 import { useT } from '@/lib/i18n'
+import PWAInstallPrompt from '@/components/shop/PWAInstallPrompt'
 
 // ── Delivery date helpers ────────────────────────────────────────────────────
 function getDeliveryDates() {
@@ -50,6 +52,7 @@ function useRevolutScript() {
 
 export default function CheckoutForm({ open, onClose, cart, currency, onOrderSuccess, orderSuccess }) {
   const t = useT()
+  const navigate = useNavigate()
   const revolutScriptReady = useRevolutScript()
 
   const [step, setStep]                 = useState('form')  // 'form' | 'paying' | 'success'
@@ -59,8 +62,18 @@ export default function CheckoutForm({ open, onClose, cart, currency, onOrderSuc
     customer_name: '', customer_email: '', customer_phone: '',
     delivery_address: '', delivery_city: '', delivery_postal_code: '', notes: '',
   })
+  const [giftWrap, setGiftWrap] = useState(false)
+  const [giftMessage, setGiftMessage] = useState('')
   const [createdOrderId, setCreatedOrderId] = useState(null)
+  const [canApplePay, setCanApplePay] = useState(false)
   const revolutInstanceRef = useRef(null)
+
+  // Detect Apple Pay support (Safari on Apple device with card set up)
+  useEffect(() => {
+    if (window.ApplePaySession?.canMakePayments?.()) {
+      setCanApplePay(true)
+    }
+  }, [])
 
   const dates      = getDeliveryDates()
   const subtotal   = cart.reduce((s, i) => s + i.price * i.quantity, 0)
@@ -70,21 +83,31 @@ export default function CheckoutForm({ open, onClose, cart, currency, onOrderSuc
 
   const set = patch => setFormData(prev => ({ ...prev, ...patch }))
 
-  // ── Reset when dialog closes ─────────────────────────────────────────────
+  // ── Reset when dialog closes / pre-fill bundle note when it opens ────────
   useEffect(() => {
-    if (!open) {
-      setStep('form')
-      setCreatedOrderId(null)
-      setDeliveryDate('')
-      setFormData({
-        customer_name: '', customer_email: '', customer_phone: '',
-        delivery_address: '', delivery_city: '', delivery_postal_code: '', notes: '',
-      })
-      // Destroy any lingering Revolut widget instance
-      if (revolutInstanceRef.current) {
-        try { revolutInstanceRef.current.destroy() } catch (_) {}
-        revolutInstanceRef.current = null
+    if (open) {
+      // If coming from gift box builder, pre-fill the assembly note
+      const bundleNote = localStorage.getItem('zr_bundle_note') || ''
+      if (bundleNote) {
+        setFormData(prev => ({ ...prev, notes: bundleNote }))
+        localStorage.removeItem('zr_bundle_note')
       }
+      return
+    }
+    // Dialog closed — reset
+    setStep('form')
+    setCreatedOrderId(null)
+    setDeliveryDate('')
+    setGiftWrap(false)
+    setGiftMessage('')
+    setFormData({
+      customer_name: '', customer_email: '', customer_phone: '',
+      delivery_address: '', delivery_city: '', delivery_postal_code: '', notes: '',
+    })
+    // Destroy any lingering Revolut widget instance
+    if (revolutInstanceRef.current) {
+      try { revolutInstanceRef.current.destroy() } catch (_) {}
+      revolutInstanceRef.current = null
     }
   }, [open])
 
@@ -109,6 +132,8 @@ export default function CheckoutForm({ open, onClose, cart, currency, onOrderSuc
         delivery_fee: deliveryFee,
         total,
         currency: 'EUR',  // Revolut always in EUR; HUF display is cosmetic
+        gift_wrap: giftWrap,
+        gift_message: giftMessage,
       })
 
       setCreatedOrderId(order.id)
@@ -149,6 +174,10 @@ export default function CheckoutForm({ open, onClose, cart, currency, onOrderSuc
               toast.success('Payment successful!', {
                 style: { background: '#3D4F3D', color: 'white', border: 'none' },
               })
+              const confirmedOrderId = createdOrderId
+              if (confirmedOrderId) {
+                setTimeout(() => navigate(`/order-confirmation/${confirmedOrderId}`), 800)
+              }
             },
             onError(message) {
               revolutInstanceRef.current = null
@@ -202,33 +231,36 @@ export default function CheckoutForm({ open, onClose, cart, currency, onOrderSuc
   // ── Success screen ───────────────────────────────────────────────────────
   if (orderSuccess || step === 'success') {
     return (
-      <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md bg-[#F5F3F0] border-none rounded-none">
-          <div className="text-center py-8 space-y-4">
-            <div className="w-16 h-16 border border-[#3D4F3D] rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle className="w-8 h-8 text-[#3D4F3D]" />
+      <>
+        <Dialog open={open} onOpenChange={onClose}>
+          <DialogContent className="sm:max-w-md bg-[#F5F3F0] border-none rounded-none">
+            <div className="text-center py-8 space-y-4">
+              <div className="w-16 h-16 border border-[#3D4F3D] rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle className="w-8 h-8 text-[#3D4F3D]" />
+              </div>
+              <p className="text-[10px] text-[#3D4F3D]/60 tracking-[0.2em]">{t('thank_you')}</p>
+              <h3 className="text-xl text-[#3D4F3D] tracking-wider">{t('order_confirmed')}</h3>
+              <p className="text-[#3D4F3D]/60 text-sm tracking-wide">
+                {t('payment_received')}
+              </p>
+              <Button
+                onClick={onClose}
+                className="bg-[#3D4F3D] hover:bg-[#2D3F2D] text-white text-xs tracking-[0.2em] px-8 h-12 rounded-none mt-4"
+              >
+                {t('continue_shopping')}
+              </Button>
             </div>
-            <p className="text-[10px] text-[#3D4F3D]/60 tracking-[0.2em]">{t('thank_you')}</p>
-            <h3 className="text-xl text-[#3D4F3D] tracking-wider">{t('order_confirmed')}</h3>
-            <p className="text-[#3D4F3D]/60 text-sm tracking-wide">
-              {t('payment_received')}
-            </p>
-            <Button
-              onClick={onClose}
-              className="bg-[#3D4F3D] hover:bg-[#2D3F2D] text-white text-xs tracking-[0.2em] px-8 h-12 rounded-none mt-4"
-            >
-              {t('continue_shopping')}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+        <PWAInstallPrompt show={true} />
+      </>
     )
   }
 
   // ── Paying screen (Revolut widget opened in popup) ───────────────────────
   if (step === 'paying') {
     return (
-      <Dialog open={open} onOpenChange={onClose} modal={false}>
+      <Dialog open={open} onOpenChange={() => {}} modal={false}>
         <DialogContent className="sm:max-w-md bg-[#F5F3F0] border-none rounded-none">
           <div className="text-center py-12 space-y-5">
             <Loader2 className="w-10 h-10 animate-spin text-[#3D4F3D] mx-auto" />
@@ -365,9 +397,38 @@ export default function CheckoutForm({ open, onClose, cart, currency, onOrderSuc
             <div className="col-span-2">
               <Label className="text-[10px] text-[#3D4F3D]/70 tracking-wider">{t('notes_opt')}</Label>
               <Textarea value={formData.notes} onChange={e => set({ notes: e.target.value })}
-                className="mt-2 bg-white border-[#3D4F3D]/20 rounded-none text-[#3D4F3D] focus:border-[#3D4F3D] focus:ring-0 resize-none"
-                rows={2} />
+                placeholder={t('notes_ph')}
+                className="mt-2 bg-white border-[#3D4F3D]/20 rounded-none text-[#3D4F3D] focus:border-[#3D4F3D] focus:ring-0 resize-none placeholder:text-[#3D4F3D]/30 placeholder:text-xs"
+                rows={3} />
             </div>
+          </div>
+
+          {/* Gift options */}
+          <div className="space-y-3 border-t border-[#3D4F3D]/10 pt-4 mt-2">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={giftWrap}
+                onChange={e => setGiftWrap(e.target.checked)}
+                className="w-4 h-4 accent-[#3D4F3D]"
+              />
+              <div>
+                <p className="text-xs text-[#3D4F3D] tracking-[0.1em]">GIFT WRAPPING</p>
+                <p className="text-[10px] text-[#3D4F3D]/50">Complimentary gift wrapping</p>
+              </div>
+            </label>
+            {giftWrap && (
+              <div>
+                <label className="text-[9px] tracking-[0.2em] text-[#3D4F3D]/60 uppercase block mb-1">Gift Message (optional)</label>
+                <textarea
+                  value={giftMessage}
+                  onChange={e => setGiftMessage(e.target.value)}
+                  placeholder="Write your personal message..."
+                  rows={3}
+                  className="w-full border border-[#3D4F3D]/20 px-3 py-2 text-xs text-[#3D4F3D] placeholder-[#3D4F3D]/30 focus:outline-none focus:border-[#3D4F3D]/50 resize-none bg-transparent"
+                />
+              </div>
+            )}
           </div>
 
           <Separator className="bg-[#3D4F3D]/10" />
@@ -415,6 +476,11 @@ export default function CheckoutForm({ open, onClose, cart, currency, onOrderSuc
               {t('secure_revolut')}
             </p>
           </div>
+          {canApplePay && (
+            <p className="text-[9px] text-center text-[#3D4F3D]/30 tracking-widest">
+              APPLE PAY AVAILABLE INSIDE PAYMENT
+            </p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

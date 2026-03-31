@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type EmailType = 'order_confirmed' | 'order_shipped' | 'low_stock_alert'
+type EmailType = 'order_confirmed' | 'order_shipped' | 'low_stock_alert' | 'admin_new_order'
 
 interface OrderItem {
   product_name: string
@@ -291,10 +291,11 @@ serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   try {
-    const { type, order_id, products } = await req.json() as {
+    const { type, order_id, products, to } = await req.json() as {
       type: EmailType
       order_id?: string
       products?: Array<{ name: string; sku: string; stock: number }>
+      to?: string
     }
 
     const supabase = createClient(
@@ -372,6 +373,38 @@ serve(async (req: Request) => {
       return new Response(JSON.stringify({ sent: true, count: lowStockProducts.length }), {
         headers: { ...CORS, 'Content-Type': 'application/json' },
       })
+    }
+
+    // ── admin_new_order ───────────────────────────────────────────────────────
+    if (type === 'admin_new_order') {
+      const toEmail = to || Deno.env.get('ADMIN_EMAIL')
+      if (!toEmail) return new Response(JSON.stringify({ error: 'No admin email' }), { status: 400, headers: CORS })
+      if (!order_id) return new Response(JSON.stringify({ error: 'order_id required' }), { status: 400, headers: CORS })
+
+      const { data: order } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', order_id)
+        .single()
+
+      const subject = `New Order #${order?.order_number || order_id}`
+      const html = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px; background: #F5F3F0;">
+          <h2 style="color: #3D4F3D; font-weight: 300; letter-spacing: 0.1em; text-transform: uppercase;">New Order Received</h2>
+          <p><strong>Order:</strong> #${order?.order_number}</p>
+          <p><strong>Customer:</strong> ${order?.customer_name}</p>
+          <p><strong>Email:</strong> ${order?.customer_email}</p>
+          <p><strong>Phone:</strong> ${order?.customer_phone}</p>
+          <p><strong>Delivery:</strong> ${order?.delivery_method} on ${order?.delivery_date}</p>
+          <p><strong>Total:</strong> €${order?.total?.toFixed(2)}</p>
+          <p><strong>Payment:</strong> ${order?.payment_status}</p>
+          ${order?.notes ? `<p><strong>Notes:</strong> ${order.notes}</p>` : ''}
+        </div>
+      `
+
+      await sendEmail(toEmail, subject, html)
+      console.log(`[send-email] Sent admin_new_order for order ${order?.order_number}`)
+      return new Response(JSON.stringify({ sent: true }), { headers: { ...CORS, 'Content-Type': 'application/json' } })
     }
 
     return new Response(JSON.stringify({ error: `Unknown type: ${type}` }), { status: 400, headers: CORS })

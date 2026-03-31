@@ -187,18 +187,22 @@ export default function FilterPanel({ filters, onFiltersChange, allProducts, isO
             />
             {/* Sheet */}
             <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 bg-[#F5F3F0] rounded-t-2xl overflow-y-auto"
-              style={{ maxHeight: '82vh' }}
+              className="fixed bottom-0 left-0 right-0 z-50 bg-[#F5F3F0] rounded-t-2xl overflow-hidden flex flex-col"
+              style={{ maxHeight: 'min(85dvh, 85vh)' }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 320 }}
             >
-              {/* Drag handle */}
-              <div className="flex justify-center pt-3 pb-2 sticky top-0 bg-[#F5F3F0]">
+              {/* Drag handle — pinned */}
+              <div className="flex-shrink-0 flex justify-center pt-3 pb-2">
                 <div className="w-10 h-1 bg-[#3D4F3D]/20 rounded-full" />
               </div>
-              <div className="px-6 pb-10">
+              {/* Scrollable content */}
+              <div
+                className="flex-1 min-h-0 overflow-y-scroll overscroll-contain px-6 pb-10"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
                 {filterContent}
               </div>
             </motion.div>

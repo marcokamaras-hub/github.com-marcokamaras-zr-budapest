@@ -4,8 +4,18 @@ import { generateOrderNumber } from '@/lib/utils'
 
 /** Create a new order */
 export async function createOrder(orderData) {
+  // Append gift wrap / gift message info to notes (avoids DB migration)
+  const notesWithGift = [
+    orderData.notes,
+    orderData.gift_wrap ? 'GIFT WRAPPED' : '',
+    orderData.gift_message ? `Gift message: ${orderData.gift_message}` : '',
+  ].filter(Boolean).join('\n')
+
+  const { gift_wrap, gift_message, ...rest } = orderData
+
   const payload = {
-    ...orderData,
+    ...rest,
+    notes: notesWithGift || undefined,
     order_number: generateOrderNumber(),
     session_id: getSessionId(),
     status: 'pending',

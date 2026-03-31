@@ -21,14 +21,9 @@ export default function CartDrawer({ open, onClose, cart, onUpdateQuantity, onRe
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-md flex flex-col bg-[#F5F3F0] border-none p-0">
         <SheetHeader className="p-6 border-b border-[#3D4F3D]/10">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-[#3D4F3D] text-xs tracking-[0.2em]">
-              {t('shopping_bag', totalQty)}
-            </SheetTitle>
-            <button onClick={() => onClose(false)} className="text-[#3D4F3D]/60 hover:text-[#3D4F3D]">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          <SheetTitle className="text-[#3D4F3D] text-xs tracking-[0.2em]">
+            {t('shopping_bag', totalQty)}
+          </SheetTitle>
         </SheetHeader>
 
         {cart.length === 0 ? (
@@ -40,13 +35,15 @@ export default function CartDrawer({ open, onClose, cart, onUpdateQuantity, onRe
           <>
             <ScrollArea className="flex-1">
               <div className="p-6 space-y-6">
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   {cart.map(item => (
                     <motion.div
                       key={item.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.22, ease: 'easeInOut' }}
+                      style={{ overflow: 'hidden' }}
                       className="flex gap-4"
                     >
                       <div className="w-20 h-24 bg-[#E8E4DF] flex-shrink-0">

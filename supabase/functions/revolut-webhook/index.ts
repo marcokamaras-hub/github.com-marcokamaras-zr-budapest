@@ -138,6 +138,18 @@ serve(async (req: Request) => {
       supabase.functions.invoke('send-email', {
         body: { type: 'order_confirmed', order_id: extRef },
       }).catch((e: Error) => console.error('[revolut-webhook] send-email error:', e.message))
+
+      // Notify admin of new paid order
+      const adminEmail = Deno.env.get('ADMIN_EMAIL')
+      if (adminEmail) {
+        supabase.functions.invoke('send-email', {
+          body: {
+            type: 'admin_new_order',
+            order_id: extRef,
+            to: adminEmail,
+          },
+        }).catch((e: Error) => console.error('[revolut-webhook] admin send-email error:', e.message))
+      }
     }
 
     return new Response(JSON.stringify({ received: true }), {

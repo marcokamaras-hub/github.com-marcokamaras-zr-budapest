@@ -2,12 +2,11 @@ import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Plus, Minus, X, Gift } from 'lucide-react'
+import { ArrowLeft, Plus, Minus, X, Gift, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { fetchProducts } from '@/api/products'
 import { createBundle } from '@/api/bundles'
 import { formatPrice } from '@/lib/utils'
@@ -15,6 +14,7 @@ import { useT } from '@/lib/i18n'
 
 export default function BundleBuilder() {
   const t = useT()
+  const navigate = useNavigate()
   const [selectedProducts, setSelectedProducts] = useState([])
   const [bundleName, setBundleName]             = useState('')
   const [searchQuery, setSearchQuery]           = useState('')
@@ -28,11 +28,22 @@ export default function BundleBuilder() {
 
   const saveMutation = useMutation({
     mutationFn: createBundle,
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['bundles'] })
-      toast.success(t('toast_gift_saved'), { style: { background: '#3D4F3D', color: 'white', border: 'none' } })
-      setSelectedProducts([])
-      setBundleName('')
+      // Push items to cart via localStorage and navigate to shop
+      const cartItems = variables.products.map(p => ({
+        id:        p.product_id,
+        name:      p.product_name,
+        price:     p.product_price,
+        image_url: p.product_image,
+        quantity:  p.quantity,
+      }))
+      localStorage.setItem('zr_pending_bundle', JSON.stringify(cartItems))
+      localStorage.setItem('zr_bundle_note', 'Gift Box Assembly')
+      navigate('/')
+    },
+    onError: () => {
+      toast.error('Could not save gift set — please try again')
     },
   })
 
@@ -55,14 +66,17 @@ export default function BundleBuilder() {
   }
 
   const subtotal   = selectedProducts.reduce((s, p) => s + p.product_price * p.quantity, 0)
-  const discount   = selectedProducts.length >= 3 ? subtotal * 0.1 : 0
-  const finalPrice = subtotal - discount
+  const finalPrice = subtotal
   const totalItems = selectedProducts.reduce((s, p) => s + p.quantity, 0)
 
-  const handleSave = () => {
-    if (!bundleName.trim())          return toast.error('Please enter a name for your gift set')
+  const handleAddToBag = () => {
     if (selectedProducts.length === 0) return toast.error('Please add at least one product')
-    saveMutation.mutate({ name: bundleName, products: selectedProducts, total_price: finalPrice, is_template: false })
+    saveMutation.mutate({
+      name:        bundleName.trim() || 'Custom Gift Set',
+      products:    selectedProducts,
+      total_price: finalPrice,
+      is_template: false,
+    })
   }
 
   return (
@@ -153,9 +167,9 @@ export default function BundleBuilder() {
               ) : (
                 <>
                   <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
-                    <AnimatePresence>
+                    <AnimatePresence initial={false}>
                       {selectedProducts.map(item => (
-                        <motion.div key={item.product_id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="flex gap-3 pb-3 border-b border-[#3D4F3D]/10">
+                        <motion.div key={item.product_id} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2, ease: 'easeInOut' }} style={{ overflow: 'hidden' }} className="flex gap-3 pb-3 border-b border-[#3D4F3D]/10">
                           <div className="w-12 h-16 bg-[#E8E4DF] flex-shrink-0">
                             {item.product_image && <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />}
                           </div>
@@ -179,28 +193,15 @@ export default function BundleBuilder() {
                       <span>{t('subtotal_items', totalItems)}</span>
                       <span>{formatPrice(subtotal, currency)}</span>
                     </div>
-                    {discount > 0 && (
-                      <div className="flex justify-between text-green-600">
-                        <span>{t('discount_label')}</span>
-                        <span>-{formatPrice(discount, currency)}</span>
-                      </div>
-                    )}
                     <div className="flex justify-between text-[#3D4F3D] font-medium text-sm pt-2 border-t border-[#3D4F3D]/10">
                       <span>{t('total_label')}</span>
                       <span>{formatPrice(finalPrice, currency)}</span>
                     </div>
                   </div>
 
-                  {selectedProducts.length >= 3 && (
-                    <div className="mt-3">
-                      <Badge className="bg-green-100 text-green-700 text-[10px] tracking-wider">{t('discount_badge')}</Badge>
-                    </div>
-                  )}
-
-                  <Button onClick={handleSave} disabled={saveMutation.isPending} className="w-full bg-[#3D4F3D] hover:bg-[#2D3F2D] text-white text-xs tracking-[0.2em] h-10 mt-4">
-                    <Gift className="w-4 h-4 mr-2" /> {t('save_gift_set')}
+                  <Button onClick={handleAddToBag} disabled={saveMutation.isPending} className="w-full bg-[#3D4F3D] hover:bg-[#2D3F2D] text-white text-xs tracking-[0.2em] h-10 mt-4">
+                    <ShoppingBag className="w-4 h-4 mr-2" /> ADD TO BAG
                   </Button>
-                  <p className="text-[10px] text-center text-[#3D4F3D]/40 mt-3 tracking-wider">{t('gift_set_saved_note')}</p>
                 </>
               )}
             </div>

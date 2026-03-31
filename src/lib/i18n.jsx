@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 
 // ─── Translations ────────────────────────────────────────────────────────────
 export const translations = {
   EN: {
     // Header / Nav
     menu:            'MENU',
-    tagline:         'pick, collect or personal delivery',
+    tagline:         'Pick · Collect · Personal delivery · exclusively for Budapest & Pest county · twice a week',
     search_ph:       'Search products...',
     no_results:      'No results for',
     clear_search:    'Clear search',
@@ -79,6 +79,7 @@ export const translations = {
     in_stock_only:  'In Stock Only',
     price_range:    'Price Range',
     shop_by:        'Shop By',
+    browse_by:      'Browse by Category',
     active_filters: 'Active Filters',
     in_stock_badge: 'In Stock',
 
@@ -107,7 +108,8 @@ export const translations = {
     full_name:         'FULL NAME *',
     phone:             'PHONE *',
     email:             'EMAIL',
-    notes_opt:         'NOTES (OPTIONAL)',
+    notes_opt:         'PERSONAL ASSEMBLY NOTE (OPTIONAL)',
+    notes_ph:          'e.g. Gift wrap, include a card, special presentation…',
     delivery_address:  'DELIVERY ADDRESS *',
     city:              'CITY *',
     postal_code:       'POSTAL CODE *',
@@ -153,7 +155,7 @@ export const translations = {
     // Bundle builder
     back_to_shop_link:     'BACK TO SHOP',
     create_gift:           'CREATE YOUR GIFT SET',
-    build_collection:      'BUILD A CUSTOM COLLECTION • 10% OFF 3+ ITEMS',
+    build_collection:      'BUILD A CUSTOM GIFT BOX COLLECTION',
     search_products_ph:    'Search products...',
     your_gift_set:         'YOUR GIFT SET',
     gift_set_name_ph:      'Gift Set Name (e.g., For Mom)',
@@ -176,7 +178,7 @@ export const translations = {
   HU: {
     // Header / Nav
     menu:            'MENÜ',
-    tagline:         'személyes átvétel és házhozszállítás',
+    tagline:         'Átvétel, személyes kézbesítés · kizárólag Budapest és Pest vármegye területén · hetente kétszer',
     search_ph:       'Termékek keresése...',
     no_results:      'Nincs találat erre:',
     clear_search:    'Keresés törlése',
@@ -250,6 +252,7 @@ export const translations = {
     in_stock_only:  'Csak készleten',
     price_range:    'Ártartomány',
     shop_by:        'Kategória',
+    browse_by:      'Kategóriák',
     active_filters: 'Aktív szűrők',
     in_stock_badge: 'Készleten',
 
@@ -278,7 +281,8 @@ export const translations = {
     full_name:         'TELJES NÉV *',
     phone:             'TELEFONSZÁM *',
     email:             'EMAIL',
-    notes_opt:         'MEGJEGYZÉS (OPCIONÁLIS)',
+    notes_opt:         'SZEMÉLYES ÖSSZEÁLLÍTÁSI KÉRÉS (OPCIONÁLIS)',
+    notes_ph:          'pl. Ajándékcsomagolás, üdvözlőkártya, különleges kérés…',
     delivery_address:  'SZÁLLÍTÁSI CÍM *',
     city:              'VÁROS *',
     postal_code:       'IRÁNYÍTÓSZÁM *',
@@ -324,7 +328,7 @@ export const translations = {
     // Bundle builder
     back_to_shop_link:     'VISSZA A BOLTBA',
     create_gift:           'AJÁNDÉKCSOMAG ÖSSZEÁLLÍTÁSA',
-    build_collection:      'EGYÉNI KOLLEKCIÓ • 10% KEDVEZMÉNY 3+ TERMÉKNÉL',
+    build_collection:      'EGYÉNI AJÁNDÉKDOBOZ KOLLEKCIÓ',
     search_products_ph:    'Termékek keresése...',
     your_gift_set:         'AJÁNDÉKCSOMAGJA',
     gift_set_name_ph:      'Ajándékcsomag neve (pl. Anyukának)',
@@ -343,13 +347,189 @@ export const translations = {
     toast_removed_wishlist:'Eltávolítva a kívánlistából',
     toast_gift_saved:     'Ajándékcsomag elmentve!',
   },
+
+  RU: {
+    // Header / Nav
+    menu:            'МЕНЮ',
+    tagline:         'Самовывоз · Персональная доставка · исключительно для Будапешта и региона Пешт · дважды в неделю',
+    search_ph:       'Поиск товаров...',
+    no_results:      'Нет результатов для',
+    clear_search:    'Очистить поиск',
+
+    // Category tab labels
+    cat_all:         'Все товары',
+    cat_bestsellers: 'Бестселлеры',
+    cat_Perfume:             'Духи',
+    cat_Hand_cream:          'Крем для рук',
+    cat_Body_cream:          'Крем для тела',
+    cat_Diffuser:            'Диффузор',
+    cat_Shower_gel:          'Гель для душа',
+    cat_Body_scrub:          'Скраб для тела',
+    cat_Body_oil:            'Масло для тела',
+    cat_Candle:              'Свеча',
+    cat_Liquid_soap:         'Жидкое мыло',
+    cat_Solid_soap:          'Мыло',
+    cat_Shampoo:             'Шампунь',
+    cat_Hair_conditioner:    'Кондиционер',
+    cat_Keratin_hair_mask:   'Кератиновая маска',
+    cat_Dead_sea_salt:       'Соль мёртвого моря',
+    cat_Giftbox:             'Подарочный набор',
+
+    // Section view
+    see_all:         'Все',
+    best_sellers_title: 'БЕСТСЕЛЛЕРЫ',
+
+    // Banners
+    bestsellers_count:  (n) => `${n} БЕСТСЕЛЛЕРОВ`,
+    free_delivery_banner: (threshold) => `БЕСПЛАТНАЯ ДОСТАВКА ОТ ${threshold}`,
+
+    // Product card / modal
+    add_to_bag:      'В КОРЗИНУ',
+    out_of_stock:    'НЕТ В НАЛИЧИИ',
+    only_left:       (n) => `ОСТАЛОСЬ ТОЛЬКО ${n}`,
+    back:            'НАЗАД',
+    swipe_browse:    'ЛИСТАЙТЕ ДЛЯ ПРОСМОТРА',
+    add_to_cart:     'ДОБАВИТЬ В КОРЗИНУ',
+    add_wishlist:    'В список желаний',
+    remove_wishlist: 'Убрать из списка желаний',
+
+    // Bottom nav
+    shop:     'МАГАЗИН',
+    wishlist: 'ЖЕЛАНИЯ',
+    bundle:   'ПОДАРОК',
+    orders:   'ЗАКАЗЫ',
+    bag:      'КОРЗИНА',
+
+    // Footer
+    free_delivery_footer: (cur) => cur === 'EUR' ? '€100' : '39 500 Ft',
+    contact: 'КОНТАКТЫ',
+
+    // Cart drawer
+    shopping_bag:   (n) => `КОРЗИНА (${n})`,
+    bag_empty:      'КОРЗИНА ПУСТА',
+    away_free:      (amt) => `${amt} до бесплатной доставки`,
+    free_unlocked:  '✓ Бесплатная доставка доступна',
+    subtotal:       'СУММА',
+    delivery:       'ДОСТАВКА',
+    free:           'БЕСПЛАТНО',
+    total:          'ИТОГО',
+    checkout:       'ОФОРМИТЬ ЗАКАЗ',
+    secure_payment: 'БЕЗОПАСНАЯ ОНЛАЙН-ОПЛАТА',
+
+    // Filter panel
+    filters:        'ФИЛЬТРЫ',
+    clear_all:      'Сбросить',
+    collections:    'Коллекции',
+    bestsellers_filter: 'Бестселлеры',
+    new_arrivals:   'Новинки',
+    in_stock_only:  'Только в наличии',
+    price_range:    'Цена',
+    shop_by:        'Категория',
+    browse_by:      'По категориям',
+    active_filters: 'Активные фильтры',
+    in_stock_badge: 'В наличии',
+
+    // Collection group labels (filter panel)
+    col_perfume:    'Духи',
+    col_home_scent: 'Домашний аромат',
+    col_body:       'Тело',
+    col_hands:      'Руки',
+    col_self_care:  'Уход за собой',
+    col_hair:       'Волосы',
+    col_travel:     'Дорожный размер',
+
+    // Checkout form
+    delivery_details:  'ДАННЫЕ О ДОСТАВКЕ',
+    delivery_method:   'СПОСОБ ДОСТАВКИ *',
+    delivery_label:    'ДОСТАВКА',
+    delivery_sub:      'По вашему адресу',
+    pickup_label:      'САМОВЫВОЗ',
+    pickup_sub:        'Забрать в магазине',
+    pickup_location:   'ПУНКТ ВЫДАЧИ',
+    budapest_store:    'Магазин в Будапеште',
+    pickup_note:       'Мы свяжемся с вами, когда заказ будет готов',
+    pickup_date:       'ДАТА САМОВЫВОЗА *',
+    delivery_date:     'ДАТА ДОСТАВКИ *',
+    select_date:       'Выберите дату',
+    full_name:         'ФИО *',
+    phone:             'ТЕЛЕФОН *',
+    email:             'EMAIL',
+    notes_opt:         'ЛИЧНОЕ ПОЖЕЛАНИЕ (НЕОБЯЗАТЕЛЬНО)',
+    notes_ph:          'Напр. подарочная упаковка, открытка, особые пожелания…',
+    delivery_address:  'АДРЕС ДОСТАВКИ *',
+    city:              'ГОРОД *',
+    postal_code:       'ПОЧТОВЫЙ ИНДЕКС *',
+    items_count:       (n) => `СУММА (${n} ТОВАРА)`,
+    preparing_payment: 'ПОДГОТОВКА К ОПЛАТЕ…',
+    pay_revolut:       'ОПЛАТИТЬ ЧЕРЕЗ REVOLUT',
+    secure_revolut:    'БЕЗОПАСНАЯ ОПЛАТА ЧЕРЕЗ REVOLUT PAY',
+    revolut_opening:   'REVOLUT PAY ОТКРЫВАЕТСЯ…',
+    complete_popup:    'Завершите оплату в окне Revolut.',
+    back_to_order:     '← Вернуться к деталям заказа',
+    thank_you:         'СПАСИБО',
+    order_confirmed:   'ЗАКАЗ ПОДТВЕРЖДЁН',
+    payment_received:  'Оплата получена. Мы свяжемся с вами для подтверждения доставки.',
+    continue_shopping: 'ПРОДОЛЖИТЬ ПОКУПКИ',
+
+    // Wishlist page
+    back_to_shop:    'НАЗАД В МАГАЗИН',
+    my_wishlist:     'МОЙ СПИСОК ЖЕЛАНИЙ',
+    saved_items:     (n) => `${n} СОХРАНЁННЫХ ТОВАРОВ`,
+    loading:         'ЗАГРУЗКА...',
+    wishlist_empty:  'СПИСОК ЖЕЛАНИЙ ПУСТ',
+    wishlist_hint:   'Сохраняйте любимые товары, чтобы вернуться к ним позже',
+    view_in_shop:    'СМОТРЕТЬ В МАГАЗИНЕ',
+
+    // Orders page
+    my_orders:       'МОИ ЗАКАЗЫ',
+    orders_count:    (n) => `${n} ЗАКАЗОВ`,
+    order_number:    'НОМЕР ЗАКАЗА',
+    items_label:     'ТОВАРЫ',
+    quantity:        (n) => `Количество: ${n}`,
+    delivery_addr:   'АДРЕС ДОСТАВКИ',
+    notes_label:     'ПРИМЕЧАНИЯ',
+    no_orders:       'ЕЩЁ НЕТ ЗАКАЗОВ',
+    no_orders_hint:  'Начните покупки, чтобы увидеть ваши заказы здесь',
+    start_shopping:  'НАЧАТЬ ПОКУПКИ',
+    status_pending:   { label: 'Заказ получен',  desc: 'Ваш заказ получен и обрабатывается' },
+    status_confirmed: { label: 'Подтверждён',    desc: 'Ваш заказ подтверждён' },
+    status_preparing: { label: 'Готовится',      desc: 'Мы тщательно готовим ваш заказ' },
+    status_shipped:   { label: 'Отправлен',      desc: 'Ваш заказ уже в пути' },
+    status_delivered: { label: 'Доставлен',      desc: 'Ваш заказ доставлен' },
+    status_cancelled: { label: 'Отменён',        desc: 'Этот заказ был отменён' },
+
+    // Bundle builder
+    back_to_shop_link:     'НАЗАД В МАГАЗИН',
+    create_gift:           'СОЗДАТЬ ПОДАРОЧНЫЙ НАБОР',
+    build_collection:      'СОСТАВИТЬ ИНДИВИДУАЛЬНЫЙ ПОДАРОЧНЫЙ НАБОР',
+    search_products_ph:    'Поиск товаров...',
+    your_gift_set:         'ВАШ ПОДАРОЧНЫЙ НАБОР',
+    gift_set_name_ph:      'Название набора (напр. Для мамы)',
+    start_adding:          'Начните добавлять товары',
+    subtotal_items:        (n) => `Сумма (${n} товара)`,
+    discount_label:        'Скидка (10%)',
+    total_label:           'Итого',
+    discount_badge:        'СКИДКА 10% ПРИМЕНЕНА',
+    save_gift_set:         'СОХРАНИТЬ НАБОР',
+    gift_set_saved_note:   'Сохранённые наборы доступны в вашем аккаунте',
+    add_btn:               'ДОБАВИТЬ',
+
+    // Toast messages
+    toast_added_bag:      'Добавлено в корзину',
+    toast_added_wishlist: 'Добавлено в список желаний',
+    toast_removed_wishlist:'Удалено из списка желаний',
+    toast_gift_saved:     'Набор сохранён!',
+  },
 }
 
 // ─── Context ─────────────────────────────────────────────────────────────────
 const LanguageContext = createContext({ lang: 'EN', setLang: () => {} })
 
 export function LanguageProvider({ children }) {
-  const [lang, setLang] = useState('EN')
+  const [lang, setLang] = useState(() => {
+    try { return localStorage.getItem('zr_lang') || 'EN' } catch { return 'EN' }
+  })
+  useEffect(() => { localStorage.setItem('zr_lang', lang) }, [lang])
   return (
     <LanguageContext.Provider value={{ lang, setLang }}>
       {children}

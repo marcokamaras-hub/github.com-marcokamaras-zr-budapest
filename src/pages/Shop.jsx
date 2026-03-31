@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -6,10 +6,10 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Menu, Search, Heart, ShoppingBag, X, ChevronDown, ChevronLeft, ChevronRight, Gift, Package, PackageOpen, LayoutGrid, ArrowRight, SlidersHorizontal } from 'lucide-react'
+import { Menu, Search, Heart, ShoppingBag, X, ChevronDown, ChevronLeft, ChevronRight, Gift, Package, PackageOpen, LayoutGrid, ArrowRight, SlidersHorizontal, MapPin } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { formatPrice } from '@/lib/utils'
 import { useLanguage, useT, useCatLabel } from '@/lib/i18n'
 import { COLLECTIONS, matchesCollections } from '@/lib/collections'
@@ -30,6 +30,7 @@ const ALL_CATEGORIES = [
   { value: 'all',               label: 'ALL PRODUCTS'   },
   { value: 'bestsellers',       label: 'BEST SELLERS'   },
   { value: 'Perfume',           label: 'PERFUMES'       },
+  { value: 'Giftbox',           label: 'GIFT SETS'      },
   { value: 'Hand cream',        label: 'HAND CREAM'     },
   { value: 'Body cream',        label: 'BODY CREAM'     },
   { value: 'Diffuser',          label: 'DIFFUSERS'      },
@@ -43,12 +44,12 @@ const ALL_CATEGORIES = [
   { value: 'Hair conditioner',  label: 'CONDITIONER'    },
   { value: 'Keratin hair mask', label: 'HAIR MASK'      },
   { value: 'Dead sea salt',     label: 'DEAD SEA SALT'  },
-  { value: 'Giftbox',           label: 'GIFT SETS'      },
 ]
 
 // Used only by AllProductsSections carousels — not shown as nav tabs
 const SECTION_CATS = [
   { value: 'Perfume',           label: 'PERFUMES'      },
+  { value: 'Giftbox',           label: 'GIFT SETS'     },
   { value: 'Hand cream',        label: 'HAND CREAM'    },
   { value: 'Body cream',        label: 'BODY CREAM'    },
   { value: 'Diffuser',          label: 'DIFFUSERS'     },
@@ -62,7 +63,6 @@ const SECTION_CATS = [
   { value: 'Hair conditioner',  label: 'CONDITIONER'   },
   { value: 'Keratin hair mask', label: 'HAIR MASK'     },
   { value: 'Dead sea salt',     label: 'DEAD SEA SALT' },
-  { value: 'Giftbox',           label: 'GIFT SETS'     },
 ]
 
 const bestSellers = [
@@ -166,22 +166,13 @@ function ProductCard({ product, onAddToCart, onToggleWishlist, isInWishlist, cur
     >
       <div className="relative aspect-[3/4] bg-[#E8E4DF] overflow-hidden mb-3">
         {product.image_url ? (
-          <>
-            <img
-              src={product.image_url}
-              alt={product.name}
-              loading="lazy"
-              className="w-full h-full object-cover transition-all duration-500 group-hover:opacity-0"
-              onError={e => { e.target.style.display = 'none' }}
-            />
-            <img
-              src={product.image_url}
-              alt={product.name}
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover opacity-0 transition-all duration-500 group-hover:opacity-100 scale-105"
-              onError={e => { e.target.style.display = 'none' }}
-            />
-          </>
+          <img
+            src={product.image_url}
+            alt={product.name}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={e => { e.target.style.display = 'none' }}
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-[#3D4F3D]/20 text-center px-4">
@@ -209,7 +200,8 @@ function ProductCard({ product, onAddToCart, onToggleWishlist, isInWishlist, cur
 
         <button
           onClick={e => { e.stopPropagation(); onToggleWishlist(product) }}
-          className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+          style={{ touchAction: 'manipulation' }}
+          className="absolute top-3 right-3 z-10 bg-white/90 hover:bg-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
         >
           <Heart className={`w-4 h-4 transition-colors ${isInWishlist ? 'fill-[#3D4F3D] text-[#3D4F3D]' : 'text-[#3D4F3D]/60'}`} />
         </button>
@@ -231,12 +223,14 @@ function ProductCard({ product, onAddToCart, onToggleWishlist, isInWishlist, cur
         <p className="text-sm text-[#3D4F3D] font-light pt-1">{formatPrice(product.price, currency)}</p>
       </div>
       <button
+        onTouchEnd={e => { e.preventDefault(); e.stopPropagation(); if (product.stock > 0) onAddToCart(product) }}
         onClick={e => { e.stopPropagation(); if (product.stock > 0) onAddToCart(product) }}
         disabled={product.stock === 0}
-        className={`mt-3 w-full border text-[9px] tracking-[0.2em] py-2.5 transition-all duration-200 ${
+        style={{ touchAction: 'manipulation' }}
+        className={`mt-3 w-full border text-[9px] tracking-[0.2em] py-2.5 transition-colors duration-200 ${
           product.stock === 0
             ? 'border-[#3D4F3D]/10 text-[#3D4F3D]/30 cursor-not-allowed'
-            : 'border-[#3D4F3D]/20 hover:bg-[#3D4F3D] hover:text-white hover:border-[#3D4F3D] text-[#3D4F3D]'
+            : 'border-[#3D4F3D]/30 text-[#3D4F3D] active:bg-[#3D4F3D] active:text-white cursor-pointer'
         }`}
       >
         {product.stock === 0 ? t('out_of_stock') : t('add_to_bag')}
@@ -270,7 +264,7 @@ function AllProductsSections({ products, onAddToCart, onToggleWishlist, isInWish
               {t('see_all')} ({products.filter(isBestSeller).length}) <ArrowRight className="w-3 h-3" />
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-3 -mx-4 px-4 lg:mx-0 lg:px-0">
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-3 -mx-4 px-4 lg:mx-0 lg:px-0 scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
             {bestsellersProducts.map(product => (
               <div key={product.id} className="flex-shrink-0 w-44 md:w-52">
                 <ProductCard
@@ -302,7 +296,7 @@ function AllProductsSections({ products, onAddToCart, onToggleWishlist, isInWish
                 {t('see_all')} ({catProducts.length}) <ArrowRight className="w-3 h-3" />
               </button>
             </div>
-            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-3 -mx-4 px-4 lg:mx-0 lg:px-0">
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-3 -mx-4 px-4 lg:mx-0 lg:px-0 scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
               {catProducts.slice(0, 8).map(product => (
                 <div key={product.id} className="flex-shrink-0 w-44 md:w-52">
                   <ProductCard
@@ -325,10 +319,13 @@ function AllProductsSections({ products, onAddToCart, onToggleWishlist, isInWish
 
 // ─── Main Shop Page ──────────────────────────────────────────
 export default function Shop() {
+  const navigate = useNavigate()
   const { lang, setLang } = useLanguage()
   const t        = useT()
   const catLabel = useCatLabel()
-  const [cart, setCart]                       = useState([])
+  const [cart, setCart]                       = useState(() => {
+    try { return JSON.parse(localStorage.getItem('zr_cart')) || [] } catch { return [] }
+  })
   const [cartOpen, setCartOpen]               = useState(false)
   const [checkoutOpen, setCheckoutOpen]       = useState(false)
   const [orderSuccess, setOrderSuccess]       = useState(false)
@@ -336,14 +333,22 @@ export default function Shop() {
   const [mobileMenuOpen, setMobileMenuOpen]   = useState(false)
   const [desktopMenuOpen, setDesktopMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen]           = useState(false)
-  const [currency, setCurrency]               = useState('EUR')
+  const [currency, setCurrency]               = useState(() => {
+    try { return localStorage.getItem('zr_currency') || 'EUR' } catch { return 'EUR' }
+  })
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [browseList, setBrowseList]           = useState([])
+  const [browseDir, setBrowseDir]             = useState(1)
   const [descriptionLang, setDescriptionLang] = useState('EN')
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
-  const tabsContainerRef = useRef(null)
-  const productGridRef   = useRef(null)
-  const touchStartX      = useRef(null)
+  const [recentlyViewed, setRecentlyViewed]   = useState(() => {
+    try { return JSON.parse(localStorage.getItem('zr_recently_viewed')) || [] } catch { return [] }
+  })
+  const [showBackToTop, setShowBackToTop]     = useState(false)
+  const tabsContainerRef   = useRef(null)
+  const productGridRef     = useRef(null)
+  const touchStartX        = useRef(null)
+  const collectionsInitial = useRef(true)
   const [filters, setFilters] = useState({
     category:        'bestsellers',
     priceRange:      [0, 210],
@@ -352,6 +357,31 @@ export default function Shop() {
     newArrivalsOnly: false,
     inStockOnly:     false,
   })
+
+  // Force scroll to top on mount
+  useEffect(() => { window.scrollTo(0, 0) }, [])
+
+  // Persist cart, currency to localStorage (Feature #1, #17)
+  useEffect(() => { localStorage.setItem('zr_cart', JSON.stringify(cart)) }, [cart])
+  useEffect(() => { localStorage.setItem('zr_currency', currency) }, [currency])
+
+  // Back-to-top scroll tracking (Feature #11)
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 400)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Recently viewed tracking (Feature #9)
+  useEffect(() => {
+    if (!selectedProduct) return
+    setRecentlyViewed(prev => {
+      const filtered = prev.filter(p => p.id !== selectedProduct.id)
+      const next = [selectedProduct, ...filtered].slice(0, 8)
+      localStorage.setItem('zr_recently_viewed', JSON.stringify(next))
+      return next
+    })
+  }, [selectedProduct])
 
   const qc = useQueryClient()
 
@@ -367,27 +397,47 @@ export default function Shop() {
 
   const maxPrice = Math.max(...products.map(p => p.price || 0), 210)
 
-  // Scroll to top on initial mount
-  useEffect(() => { window.scrollTo(0, 0) }, [])
+  // Pick up bundle items added from BundleBuilder → add to cart + open drawer
+  useEffect(() => {
+    const pending = localStorage.getItem('zr_pending_bundle')
+    if (!pending) return
+    try {
+      const items = JSON.parse(pending)
+      if (Array.isArray(items) && items.length > 0) {
+        setCart(prev => {
+          let updated = [...prev]
+          items.forEach(item => {
+            const existing = updated.find(i => i.id === item.id)
+            if (existing) updated = updated.map(i => i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i)
+            else updated = [...updated, item]
+          })
+          return updated
+        })
+        setCartOpen(true)
+      }
+    } catch (_) {}
+    localStorage.removeItem('zr_pending_bundle')
+  }, [])
 
   useEffect(() => {
     if (products.length > 0 && filters.priceRange[1] === 210) {
       setFilters(prev => ({ ...prev, priceRange: [0, maxPrice] }))
     }
-  }, [products.length])
+  }, [products.length, maxPrice])
 
   useEffect(() => {
     if (tabsContainerRef.current) {
       const activeTab = tabsContainerRef.current.querySelector('[data-active="true"]')
-      if (activeTab) activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+      if (activeTab) {
+        const c = tabsContainerRef.current
+        c.scrollLeft = activeTab.offsetLeft - c.offsetWidth / 2 + activeTab.offsetWidth / 2
+      }
     }
   }, [filters.category])
 
-  // Scroll product grid to top whenever the active collections change
+  // Track initial collections mount (guard for other effects)
   useEffect(() => {
-    if (productGridRef.current) {
-      productGridRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
+    if (collectionsInitial.current) { collectionsInitial.current = false; return }
   }, [filters.collections])
 
   // Sync description language with app language
@@ -423,12 +473,13 @@ export default function Shop() {
 
   // Cart
   const addToCart = product => {
+    navigator.vibrate?.(40)
     setCart(prev => {
       const existing = prev.find(i => i.id === product.id)
       if (existing) return prev.map(i => i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i)
       return [...prev, { ...product, quantity: 1 }]
     })
-    toast.success(t('toast_added_bag'), { style: { background: '#3D4F3D', color: 'white', border: 'none' } })
+    toast.success(t('toast_added_bag'), { style: { background: '#3D4F3D', color: 'white', border: 'none' }, duration: 1200 })
   }
 
   const updateQuantity = (id, qty) => {
@@ -475,6 +526,20 @@ export default function Shop() {
       return getBestSellerRank(a) - getBestSellerRank(b)
     })
 
+  // Group by name+category — show one card per fragrance, pick lowest-price variant (Feature #7)
+  const groupedProducts = useMemo(() => {
+    const map = new Map()
+    filteredProducts.forEach(p => {
+      const key = `${p.name?.trim().toLowerCase()}|${p.category?.trim().toLowerCase()}`
+      if (!map.has(key)) {
+        map.set(key, p)
+      } else {
+        if (p.price < map.get(key).price) map.set(key, p)
+      }
+    })
+    return Array.from(map.values())
+  }, [filteredProducts])
+
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0)
 
   const activeFiltersCount =
@@ -488,6 +553,7 @@ export default function Shop() {
     setFilters(prev => ({ ...prev, category: value, collections: [], priceRange: [0, maxPrice], bestsellersOnly: false, newArrivalsOnly: false }))
     setMobileMenuOpen(false)
     setDesktopMenuOpen(false)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   // Exclusive radio-style collection selector
@@ -502,10 +568,16 @@ export default function Shop() {
       inStockOnly:     false,
       priceRange:      [0, maxPrice],
     }))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   // ── Product browse / navigation ──────────────────────────────────────────
   const openProduct = (product, list) => {
+    if (window.innerWidth < 1024) {
+      const browseIds = (list && list.length > 0 ? list : filteredProducts).map(p => p.id)
+      navigate(`/product/${product.id}`, { state: { browseIds } })
+      return
+    }
     setSelectedProduct(product)
     setBrowseList(list && list.length > 0 ? list : filteredProducts)
   }
@@ -514,8 +586,8 @@ export default function Shop() {
   const hasPrev = currentBrowseIndex > 0
   const hasNext = currentBrowseIndex < browseList.length - 1
 
-  const goPrev = () => hasPrev && setSelectedProduct(browseList[currentBrowseIndex - 1])
-  const goNext = () => hasNext && setSelectedProduct(browseList[currentBrowseIndex + 1])
+  const goPrev = () => { if (hasPrev) { setBrowseDir(-1); setSelectedProduct(browseList[currentBrowseIndex - 1]) } }
+  const goNext = () => { if (hasNext) { setBrowseDir(1);  setSelectedProduct(browseList[currentBrowseIndex + 1]) } }
 
   // Keyboard arrows while modal is open
   useEffect(() => {
@@ -555,18 +627,19 @@ export default function Shop() {
                     <span className="text-xs tracking-wider">{t('menu')}</span>
                   </button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-80 bg-[#F5F3F0] border-none p-0">
-                  <div className="p-6">
+                <SheetContent side="left" className="w-80 bg-[#F5F3F0] border-none p-0 flex flex-col overflow-hidden">
+                  {/* Fixed top — title + main tabs */}
+                  <div className="flex-shrink-0 px-6 pt-6 pb-4">
                     <SheetHeader className="mb-8">
                       <SheetTitle className="text-[#3D4F3D] tracking-widest text-sm">MENU</SheetTitle>
                     </SheetHeader>
-                    <nav className="space-y-4">
+                    <nav className="space-y-1">
                       {categories.map(cat => (
                         <button
                           key={cat.value}
                           onClick={() => handleCategorySelect(cat.value)}
                           className={`block w-full text-left text-sm tracking-wider py-2 transition-colors ${
-                            filters.category === cat.value
+                            filters.category === cat.value && filters.collections.length === 0
                               ? 'text-[#3D4F3D] font-medium'
                               : 'text-[#3D4F3D]/60 hover:text-[#3D4F3D]'
                           }`}
@@ -575,6 +648,39 @@ export default function Shop() {
                         </button>
                       ))}
                     </nav>
+                  </div>
+                  {/* Scrollable categories with sticky label */}
+                  <div className="flex-1 overflow-y-auto border-t border-[#3D4F3D]/10">
+                    <div className="sticky top-0 bg-[#F5F3F0] px-6 py-3 z-10">
+                      <p className="text-[10px] tracking-[0.2em] text-[#3D4F3D]/40 uppercase">{t('browse_by')}</p>
+                    </div>
+                    <div className="px-6 pb-8 space-y-1">
+                      {SECTION_CATS.map(cat => (
+                        <button
+                          key={cat.value}
+                          onClick={() => handleCategorySelect(cat.value)}
+                          className={`block w-full text-left text-xs tracking-wider py-1.5 transition-colors ${
+                            filters.category === cat.value && filters.collections.length === 0
+                              ? 'text-[#3D4F3D] font-medium'
+                              : 'text-[#3D4F3D]/50 hover:text-[#3D4F3D]'
+                          }`}
+                        >
+                          {catLabel(cat.value)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Pinned contact footer */}
+                  <div className="flex-shrink-0 border-t border-[#3D4F3D]/10 px-6 py-5">
+                    <p className="text-[10px] tracking-[0.2em] text-[#3D4F3D]/40 uppercase mb-3">
+                      {t('contact')} <span className="text-[#3D4F3D]/25">·</span> HORECA &amp; HOSPITALITY
+                    </p>
+                    <a
+                      href="mailto:contact@zrbudapest.store"
+                      className="text-sm text-[#3D4F3D]/70 hover:text-[#3D4F3D] tracking-wide transition-colors block"
+                    >
+                      contact@zrbudapest.store
+                    </a>
                   </div>
                 </SheetContent>
               </Sheet>
@@ -589,26 +695,61 @@ export default function Shop() {
                   </button>
                   <AnimatePresence>
                     {desktopMenuOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="absolute top-full left-0 bg-[#3D4F3D] border border-white/10 py-2 min-w-48 z-50"
-                      >
-                        {categories.map(cat => (
-                          <button
-                            key={cat.value}
-                            onClick={() => handleCategorySelect(cat.value)}
-                            className={`block w-full text-left px-4 py-2 text-sm tracking-wider transition-colors ${
-                              filters.category === cat.value
-                                ? 'text-white bg-white/10'
-                                : 'text-white/70 hover:text-white hover:bg-white/5'
-                            }`}
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setDesktopMenuOpen(false)} />
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="absolute top-full left-0 bg-[#3D4F3D] border border-white/10 min-w-48 z-50 max-h-[80vh] flex flex-col"
+                        >
+                        {/* Scrollable content */}
+                        <div className="flex-1 overflow-y-auto py-2">
+                          {categories.map(cat => (
+                            <button
+                              key={cat.value}
+                              onClick={() => handleCategorySelect(cat.value)}
+                              className={`block w-full text-left px-4 py-2 text-sm tracking-wider transition-colors ${
+                                filters.category === cat.value
+                                  ? 'text-white bg-white/10'
+                                  : 'text-white/70 hover:text-white hover:bg-white/5'
+                              }`}
+                            >
+                              {catLabel(cat.value)}
+                            </button>
+                          ))}
+                          {/* Browse by Category */}
+                          <div className="border-t border-white/10 mx-4 mt-2 pt-3">
+                            <p className="text-[9px] tracking-[0.2em] text-white/30 uppercase mb-2">{t('browse_by')}</p>
+                          </div>
+                          {SECTION_CATS.map(cat => (
+                            <button
+                              key={cat.value}
+                              onClick={() => handleCategorySelect(cat.value)}
+                              className={`block w-full text-left px-4 py-1.5 text-sm tracking-wider transition-colors ${
+                                filters.category === cat.value
+                                  ? 'text-white bg-white/10'
+                                  : 'text-white/70 hover:text-white hover:bg-white/5'
+                              }`}
+                            >
+                              {catLabel(cat.value)}
+                            </button>
+                          ))}
+                        </div>
+                        {/* Pinned contact footer */}
+                        <div className="flex-shrink-0 border-t border-white/10 px-4 py-3">
+                          <p className="text-[9px] tracking-[0.2em] text-white/30 uppercase mb-2">
+                            {t('contact')} <span className="text-white/15">·</span> HORECA &amp; HOSPITALITY
+                          </p>
+                          <a
+                            href="mailto:contact@zrbudapest.store"
+                            className="text-xs text-white/60 hover:text-white tracking-wide transition-colors block"
                           >
-                            {catLabel(cat.value)}
-                          </button>
-                        ))}
-                      </motion.div>
+                            contact@zrbudapest.store
+                          </a>
+                        </div>
+                        </motion.div>
+                      </>
                     )}
                   </AnimatePresence>
                 </div>
@@ -616,20 +757,20 @@ export default function Shop() {
             </div>
 
             {/* Centre — Logo */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-4 md:top-[32%] md:-translate-y-1/2 w-[72%] sm:w-auto">
+            <div className="absolute left-1/2 -translate-x-1/2 top-1 md:top-[28%] md:-translate-y-1/2 w-[72%] sm:w-auto">
               <div className="text-center">
                 <img
                   src="https://mbbxrfjgqvximrbumbop.supabase.co/storage/v1/object/public/public/images/zrlogo_clean.png"
                   alt="PERFUMERIE ZIELINSKI & ROZEN"
-                  className="h-24 md:h-32 w-auto mx-auto brightness-0 invert"
+                  className="h-[115px] md:h-[154px] w-auto mx-auto brightness-0 invert"
                 />
                 <a
-                  href="https://search.google.com/local/writereview?placeid=ChIJsRp7GAXdQUcRXLVF1-Ipo7o"
+                  href="https://www.google.com/search?sca_esv=2e8ca08f5eada962&sxsrf=ANbL-n6tlavMN67-TudNF0fLUDJrybrfZA:1772597882948&q=Zielinski+%26+Rozen+Perfumerie+Budapest&si=AL3DRZGNtcdgKOqVhotcr-UG2kkYpwR2WO4qu3O00NmpwBmLnTv96j-X7Z3nAEFVL_ZLuKzdd5_pCitBY7WKK5NIa5crGT7lmmmDej1IhhNWJn36SxHi_qTqEu_H1wRd9W274dimVyQvLzz7uNamvT1sVEarlQPvtQ%3D%3D&sa=X&ved=2ahUKEwii75HZsYWTAxXd1wIHHeG-A5MQ_coHegQIKxAB&biw=1680&bih=837&dpr=2"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block text-white/80 hover:text-white text-center text-[11px] md:text-base font-light normal-case tracking-[0.04em] md:tracking-[0.15em] px-1 md:px-2 py-1 mt-1 transition-colors"
+                  className="block text-white/80 hover:text-white text-center text-[13px] md:text-[18px] font-light normal-case tracking-[0.04em] md:tracking-[0.15em] px-1 md:px-2 py-0 -mt-5 md:mt-1 transition-colors"
                 >
-                  Budapest · Székely Mihály u. 4, 1061
+                  Budapest · Székely Mihály u. 4, 1061 <MapPin className="inline-block w-4 h-4 md:w-5 md:h-5 ml-1 mb-0.5 text-white/70" />
                   <span className="block text-white/60 text-[10px] md:text-sm tracking-wide mt-0.5">{t('tagline')}</span>
                 </a>
               </div>
@@ -656,20 +797,30 @@ export default function Shop() {
               </Link>
               <button className="text-white relative flex items-center justify-center w-6 h-6" onClick={() => setCartOpen(true)}>
                 <ShoppingBag className="w-6 h-6" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-white text-[#3D4F3D] text-[10px] rounded-full flex items-center justify-center font-medium">
-                    {cartCount}
-                  </span>
-                )}
+                <AnimatePresence>
+                  {cartCount > 0 && (
+                    <motion.span
+                      key={cartCount}
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      className="absolute -top-1 -right-1 w-4 h-4 bg-white text-[#3D4F3D] text-[10px] rounded-full flex items-center justify-center font-medium"
+                    >
+                      {cartCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </button>
             </div>
           </div>
 
-          {/* Language + Currency toggle — EN/HU stacked above EUR/HUF */}
-          <div className="flex justify-center pb-4">
-            {[['EN','EUR'], ['HU','HUF']].map(([l, cur]) => (
-              <div key={l} className="flex flex-col items-center">
+          {/* Language + Currency toggle — separate centered rows */}
+          <div className="flex flex-col items-center pb-4 gap-0">
+            <div className="flex justify-center">
+              {['EN', 'HU', 'RU'].map(l => (
                 <button
+                  key={l}
                   onClick={() => setLang(l)}
                   className={`px-3 py-0.5 text-[10px] tracking-widest transition-colors ${
                     lang === l ? 'text-white font-bold' : 'text-white/40 hover:text-white/60'
@@ -677,7 +828,12 @@ export default function Shop() {
                 >
                   {l}
                 </button>
+              ))}
+            </div>
+            <div className="flex justify-center">
+              {[['EUR'], ['HUF']].map(([cur]) => (
                 <button
+                  key={cur}
                   onClick={() => setCurrency(cur)}
                   className={`px-3 py-1 text-xs tracking-widest transition-colors ${
                     currency === cur ? 'text-white font-bold' : 'text-white/50 hover:text-white/70'
@@ -685,8 +841,8 @@ export default function Shop() {
                 >
                   {cur}
                 </button>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
@@ -697,6 +853,7 @@ export default function Shop() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="bg-[#3D4F3D] border-t border-white/10 overflow-hidden"
             >
               <div className="px-4 lg:px-8 py-4">
@@ -711,6 +868,26 @@ export default function Shop() {
                   <button onClick={() => setSearchOpen(false)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white">
                     <X className="w-5 h-5" />
                   </button>
+                  {searchQuery.length > 0 && (() => {
+                    const suggestions = (products || [])
+                      .filter(p => p.name?.toLowerCase().includes(searchQuery.toLowerCase()))
+                      .slice(0, 6)
+                    return suggestions.length > 0 ? (
+                      <div className="absolute top-full left-0 right-0 bg-white border border-[#3D4F3D]/10 z-50 shadow-lg mt-1">
+                        {suggestions.map(p => (
+                          <button
+                            key={p.id}
+                            style={{ touchAction: 'manipulation' }}
+                            onClick={() => { setSearchQuery(p.name); setSearchOpen(false) }}
+                            className="w-full text-left px-4 py-2.5 text-xs text-[#3D4F3D] tracking-wide hover:bg-[#F5F3F0] flex items-center gap-3 border-b border-[#3D4F3D]/5 last:border-0"
+                          >
+                            {p.image_url && <img src={p.image_url} alt="" className="w-8 h-8 object-cover bg-[#E8E4DF] flex-shrink-0" />}
+                            <span className="line-clamp-1">{p.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null
+                  })()}
                 </div>
               </div>
             </motion.div>
@@ -721,15 +898,15 @@ export default function Shop() {
       {/* ── Category nav ── */}
       <div className="sticky top-0 z-40 bg-[#F5F3F0] border-b border-[#3D4F3D]/10 shadow-sm">
         <div className="px-4 lg:px-8">
-          {/* Mobile: 2 tabs */}
-          <div className="md:hidden flex items-center gap-4 pt-4 pb-2 overflow-x-auto scrollbar-hide">
+          {/* Mobile: single row — All Products · Best Sellers | collections */}
+          <div className="md:hidden flex items-center gap-4 py-3 overflow-x-auto scrollbar-hide">
             {categories.map(cat => (
               <button
                 key={cat.value}
-                data-active={filters.category === cat.value}
-                onClick={() => setFilters(prev => ({ ...prev, category: cat.value, collections: [], priceRange: [0, maxPrice], bestsellersOnly: false, newArrivalsOnly: false }))}
+                data-active={filters.category === cat.value && filters.collections.length === 0}
+                onClick={() => handleCategorySelect(cat.value)}
                 className={`text-xs tracking-widest transition-all pb-1 whitespace-nowrap flex-shrink-0 ${
-                  filters.category === cat.value
+                  filters.category === cat.value && filters.collections.length === 0
                     ? 'text-[#3D4F3D] border-b border-[#3D4F3D]'
                     : 'text-[#3D4F3D]/50 hover:text-[#3D4F3D]'
                 }`}
@@ -737,20 +914,20 @@ export default function Shop() {
                 {catLabel(cat.value)}
               </button>
             ))}
-          </div>
-          {/* Mobile: category pills row */}
-          <div className="md:hidden flex items-center gap-1.5 pb-3 overflow-x-auto scrollbar-hide">
-            {SECTION_CATS.map(cat => (
+            {/* Divider */}
+            <div className="w-px h-4 bg-[#3D4F3D]/20 flex-shrink-0" />
+            {/* Collections */}
+            {COLLECTIONS.map(col => (
               <button
-                key={cat.value}
-                onClick={() => setFilters(prev => ({ ...prev, category: cat.value, collections: [], priceRange: [0, maxPrice], bestsellersOnly: false, newArrivalsOnly: false }))}
-                className={`flex-shrink-0 px-3 py-1 rounded-full text-[9px] tracking-[0.15em] border transition-colors whitespace-nowrap ${
-                  filters.category === cat.value
-                    ? 'bg-[#3D4F3D] text-white border-[#3D4F3D]'
-                    : 'bg-transparent text-[#3D4F3D]/60 border-[#3D4F3D]/20 hover:border-[#3D4F3D]/50'
+                key={col.key}
+                onClick={() => handleCollectionSelect(col.key)}
+                className={`text-xs tracking-widest transition-all pb-1 whitespace-nowrap flex-shrink-0 ${
+                  filters.collections.includes(col.key)
+                    ? 'text-[#3D4F3D] border-b border-[#3D4F3D]'
+                    : 'text-[#3D4F3D]/50 hover:text-[#3D4F3D]'
                 }`}
               >
-                {cat.label}
+                {t(`col_${col.key}`)}
               </button>
             ))}
           </div>
@@ -760,7 +937,7 @@ export default function Shop() {
               <button
                 key={cat.value}
                 data-active={filters.category === cat.value}
-                onClick={() => setFilters(prev => ({ ...prev, category: cat.value, collections: [], priceRange: [0, maxPrice], bestsellersOnly: false, newArrivalsOnly: false }))}
+                onClick={() => handleCategorySelect(cat.value)}
                 className={`text-xs tracking-widest transition-all pb-1 whitespace-nowrap flex-shrink-0 ${
                   filters.category === cat.value
                     ? 'text-[#3D4F3D] border-b border-[#3D4F3D]'
@@ -823,7 +1000,7 @@ export default function Shop() {
                 isInWishlist={isInWishlist}
                 currency={currency}
                 onProductClick={openProduct}
-                onCategorySelect={cat => setFilters(prev => ({ ...prev, category: cat }))}
+                onCategorySelect={handleCategorySelect}
               />
             </>
           )
@@ -863,13 +1040,16 @@ export default function Shop() {
 
             <div ref={productGridRef}>
               {isLoading ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-                  {Array(8).fill(0).map((_, i) => (
-                    <div key={i} className="space-y-3">
-                      <Skeleton className="aspect-[3/4] bg-[#E8E4DF]" />
-                      <Skeleton className="h-2 w-16 mx-auto bg-[#E8E4DF]" />
-                      <Skeleton className="h-3 w-28 mx-auto bg-[#E8E4DF]" />
-                      <Skeleton className="h-3 w-12 mx-auto bg-[#E8E4DF]" />
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4">
+                  {Array.from({length: 6}).map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="bg-[#E8E4DF] aspect-[3/4] w-full rounded-none" />
+                      <div className="mt-2 space-y-1.5 px-1">
+                        <div className="h-2 bg-[#E8E4DF] rounded w-2/3" />
+                        <div className="h-3 bg-[#E8E4DF] rounded w-full" />
+                        <div className="h-3 bg-[#E8E4DF] rounded w-1/2" />
+                      </div>
+                      <div className="mt-3 h-8 bg-[#E8E4DF] rounded-none w-full" />
                     </div>
                   ))}
                 </div>
@@ -879,7 +1059,25 @@ export default function Shop() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-                  {filteredProducts.map(product => (
+                  {/* Create Your Own — first card in Giftbox */}
+                  {filters.category === 'Giftbox' && (
+                    <Link to="/bundle" className="group block">
+                      <div className="aspect-[3/4] bg-[#3D4F3D] flex flex-col items-center justify-center gap-3 relative overflow-hidden">
+                        <div className="absolute inset-0 border-2 border-white/10" />
+                        <Gift className="w-8 h-8 text-white/60 group-hover:text-white transition-colors" />
+                        <p className="text-white text-[10px] tracking-[0.25em] text-center px-4 leading-relaxed group-hover:tracking-[0.3em] transition-all">
+                          CREATE<br/>YOUR OWN
+                        </p>
+                        <p className="text-white/40 text-[9px] tracking-widest">GIFT BOX</p>
+                      </div>
+                      <div className="mt-3 text-center space-y-1">
+                        <p className="text-[10px] text-[#3D4F3D]/50 tracking-[0.15em]">GIFTBOX</p>
+                        <p className="text-sm text-[#3D4F3D] tracking-wide">Create Your Own</p>
+                        <p className="text-xs text-[#3D4F3D]/50 tracking-wide">Bundle builder →</p>
+                      </div>
+                    </Link>
+                  )}
+                  {groupedProducts.map(product => (
                     <ProductCard
                       key={product.id}
                       product={product}
@@ -895,47 +1093,84 @@ export default function Shop() {
             </div>
           </div>
         )}
+
+        {/* Recently Viewed strip (Feature #9) */}
+        {recentlyViewed.length > 1 && !selectedProduct && (
+          <div className="px-4 pb-8 mt-6">
+            <p className="text-[9px] tracking-[0.25em] text-[#3D4F3D]/50 uppercase mb-3">Recently Viewed</p>
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+              {recentlyViewed.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => openProduct(p)}
+                  style={{ touchAction: 'manipulation' }}
+                  className="flex-shrink-0 w-20 text-left"
+                >
+                  <div className="w-20 h-24 bg-[#E8E4DF] overflow-hidden">
+                    {p.image_url && <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />}
+                  </div>
+                  <p className="text-[8px] text-[#3D4F3D] mt-1 leading-tight line-clamp-2">{p.name}</p>
+                  <p className="text-[9px] text-[#3D4F3D] font-medium">{formatPrice(p.price, currency)}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* ── Footer ── */}
-      <footer className="bg-[#2F4E3C] text-white px-4 py-8 lg:px-16">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+      <footer className="bg-[#2F4E3C] text-white px-4 py-6 lg:px-8">
+        <div className="max-w-6xl mx-auto grid grid-cols-3 gap-4 items-center">
+
+          {/* Left — Contact */}
           <div>
-            <p className="text-xs tracking-[0.2em] mb-4 text-white/60">{t('contact')}</p>
+            <p className="text-[9px] md:text-[11px] tracking-[0.2em] mb-3 text-white/50 uppercase">{t('contact')}</p>
             <a
               href="mailto:contact@zrbudapest.store"
-              className="text-sm tracking-wide opacity-70 hover:opacity-100 transition-opacity underline-offset-2 hover:underline"
+              className="block text-[11px] md:text-[15px] font-light tracking-wide text-white/70 hover:text-white transition-colors"
             >
               contact@zrbudapest.store
             </a>
-            <br />
             <a
               href="tel:+3617049973"
-              className="text-sm tracking-wide opacity-70 hover:opacity-100 transition-opacity underline-offset-2 hover:underline mt-1 inline-block"
+              className="block text-[11px] md:text-[15px] font-light tracking-wide text-white/70 hover:text-white transition-colors mt-1"
             >
               +36 1 704 9973
             </a>
           </div>
+
+          {/* Centre — Logo + address + tagline (mirrors header centre, 85% scale) */}
           <div className="text-center">
             <img
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69324dcdd5b74406aba69c8c/f85d99a42_ZRlogo.png"
-              alt="Zielinski & Rozen"
-              className="h-36 mx-auto object-contain brightness-0 invert"
+              src="https://mbbxrfjgqvximrbumbop.supabase.co/storage/v1/object/public/public/images/zrlogo_clean.png"
+              alt="PERFUMERIE ZIELINSKI & ROZEN"
+              className="h-[98px] md:h-[131px] w-auto mx-auto brightness-0 invert"
             />
-          </div>
-          <div className="px-2 text-right">
-            <p className="text-xs tracking-[0.2em] mb-4 text-white/60">
-              {t('free_delivery_banner', currency === 'EUR' ? '€100' : '39 500 Ft')}
-            </p>
             <a
               href="https://www.google.com/maps/dir/?api=1&destination=Sz%C3%A9kely+Mih%C3%A1ly+u.+4%2C+1061+Budapest"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs tracking-wide opacity-70 hover:opacity-100 transition-opacity underline-offset-2 hover:underline"
+              className="block text-white/80 hover:text-white text-center text-[11px] md:text-[15px] font-light normal-case tracking-[0.04em] md:tracking-[0.15em] px-1 -mt-4 md:mt-1 transition-colors"
             >
-              Székely Mihály u. 4, 1061 Budapest
+              Budapest · Székely Mihály u. 4, 1061 <MapPin className="inline-block w-3.5 h-3.5 md:w-4 md:h-4 ml-0.5 mb-0.5 text-white/70" />
+              <span className="block text-white/60 text-[9px] md:text-[12px] tracking-wide mt-0.5">{t('tagline')}</span>
             </a>
           </div>
+
+          {/* Right — Free delivery + HORECA */}
+          <div className="text-right">
+            <p className="text-[9px] md:text-[11px] tracking-[0.2em] mb-3 text-white/50 uppercase">
+              {t('free_delivery_banner', currency === 'EUR' ? '€100' : '39 500 Ft')}
+            </p>
+            <p className="text-[9px] md:text-[11px] tracking-[0.2em] text-white/50 uppercase">HORECA &amp; HOSPITALITY</p>
+            <a
+              href="mailto:contact@zrbudapest.store"
+              className="block text-[11px] md:text-[15px] font-light tracking-wide text-white/70 hover:text-white transition-colors mt-1"
+            >
+              contact@zrbudapest.store
+            </a>
+          </div>
+
         </div>
       </footer>
 
@@ -995,6 +1230,18 @@ export default function Shop() {
         noDesktopPanel
       />
 
+      {/* Back-to-top button — mobile only (Feature #11) */}
+      {showBackToTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{ touchAction: 'manipulation' }}
+          className="md:hidden fixed bottom-24 right-4 z-40 w-10 h-10 bg-[#3D4F3D] text-white flex items-center justify-center shadow-lg"
+          aria-label="Back to top"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+        </button>
+      )}
+
       {/* ── Mobile bottom nav ── */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white border-t border-[#3D4F3D]/10">
         <div className="flex items-center justify-around py-2 px-1 pb-safe">
@@ -1028,11 +1275,20 @@ export default function Shop() {
           >
             <ShoppingBag className="w-5 h-5" />
             <span className="text-[9px] tracking-wider">{t('bag')}</span>
-            {cartCount > 0 && (
-              <span className="absolute top-0.5 right-1 w-3.5 h-3.5 bg-[#3D4F3D] text-white text-[8px] rounded-full flex items-center justify-center font-medium">
-                {cartCount}
-              </span>
-            )}
+            <AnimatePresence>
+              {cartCount > 0 && (
+                <motion.span
+                  key={cartCount}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className="absolute top-0.5 right-1 w-3.5 h-3.5 bg-[#3D4F3D] text-white text-[8px] rounded-full flex items-center justify-center font-medium"
+                >
+                  {cartCount}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </button>
         </div>
       </nav>
@@ -1071,7 +1327,7 @@ export default function Shop() {
               <div className="bg-[#E8E4DF] relative">
                 <div className="aspect-[3/4] lg:min-h-[600px]">
                   {selectedProduct.image_url && (
-                    <img src={selectedProduct.image_url} alt={selectedProduct.name} loading="lazy" className="w-full h-full object-cover" />
+                    <img key={selectedProduct.id} src={selectedProduct.image_url} alt={selectedProduct.name} loading="lazy" className="w-full h-full object-cover animate-[fadeIn_0.2s_ease]" style={{ touchAction: 'pinch-zoom', cursor: 'zoom-in' }} />
                   )}
                 </div>
 
@@ -1161,6 +1417,32 @@ export default function Shop() {
                     </div>
                   )}
 
+                  {/* Size variants selector (Feature #7) */}
+                  {(() => {
+                    const variants = (products || []).filter(
+                      p => p.name?.trim().toLowerCase() === selectedProduct?.name?.trim().toLowerCase() &&
+                           p.category?.trim().toLowerCase() === selectedProduct?.category?.trim().toLowerCase()
+                    )
+                    return variants.length > 1 ? (
+                      <div className="flex gap-2 mt-2 mb-1">
+                        {variants.sort((a,b) => a.price - b.price).map(v => (
+                          <button
+                            key={v.id}
+                            onClick={() => setSelectedProduct(v)}
+                            style={{ touchAction: 'manipulation' }}
+                            className={`px-3 py-1.5 text-[10px] tracking-[0.1em] border transition-all ${
+                              v.id === selectedProduct?.id
+                                ? 'bg-[#3D4F3D] text-white border-[#3D4F3D]'
+                                : 'border-[#3D4F3D]/30 text-[#3D4F3D] hover:border-[#3D4F3D]'
+                            }`}
+                          >
+                            {v.size || `€${v.price}`}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null
+                  })()}
+
                   {selectedProduct.stock === 0 && (
                     <p className="text-xs tracking-[0.15em] text-red-600 mb-4">{t('out_of_stock')}</p>
                   )}
@@ -1170,7 +1452,7 @@ export default function Shop() {
 
                   <div className="mb-8 mt-12">
                     <div className="flex justify-center gap-2 mb-4">
-                      {['EN', 'HU'].map(lang => (
+                      {['EN', 'HU', 'RU'].map(lang => (
                         <button
                           key={lang}
                           onClick={() => setDescriptionLang(lang)}
@@ -1187,7 +1469,9 @@ export default function Shop() {
                     <p className="text-sm text-[#3D4F3D] leading-relaxed tracking-wide">
                       {descriptionLang === 'EN'
                         ? (selectedProduct.description || 'Zielinski & Rozen fragrances are unisex, designed to evolve and reveal their unique essence on your skin.')
-                        : (selectedProduct.description_hu || selectedProduct.description || 'Zielinski & Rozen fragrances are unisex, designed to evolve and reveal their unique essence on your skin.')}
+                        : descriptionLang === 'HU'
+                        ? (selectedProduct.description_hu || selectedProduct.description || 'Zielinski & Rozen fragrances are unisex, designed to evolve and reveal their unique essence on your skin.')
+                        : (selectedProduct.description_ru || selectedProduct.description || 'Zielinski & Rozen fragrances are unisex, designed to evolve and reveal their unique essence on your skin.')}
                     </p>
                   </div>
                 </div>
@@ -1207,6 +1491,33 @@ export default function Shop() {
                     >
                       {isInWishlist(selectedProduct.id) ? t('remove_wishlist') : t('add_wishlist')}
                     </button>
+                    {/* You may also like (Feature #8) */}
+                    {(() => {
+                      const similar = (products || [])
+                        .filter(p => p.category === selectedProduct?.category && p.id !== selectedProduct?.id && p.is_active)
+                        .slice(0, 8)
+                      return similar.length > 0 ? (
+                        <div className="border-t border-[#3D4F3D]/10 pt-4 mt-2">
+                          <p className="text-[9px] tracking-[0.25em] text-[#3D4F3D]/50 uppercase mb-3">You May Also Like</p>
+                          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                            {similar.map(p => (
+                              <button
+                                key={p.id}
+                                onClick={() => setSelectedProduct(p)}
+                                style={{ touchAction: 'manipulation' }}
+                                className="flex-shrink-0 w-16 text-left"
+                              >
+                                <div className="w-16 h-20 bg-[#E8E4DF] overflow-hidden">
+                                  {p.image_url && <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />}
+                                </div>
+                                <p className="text-[7px] text-[#3D4F3D] mt-1 leading-tight line-clamp-2">{p.name}</p>
+                                <p className="text-[8px] text-[#3D4F3D] font-medium">{formatPrice(p.price, currency)}</p>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null
+                    })()}
                   </div>
                 </div>
               </div>
