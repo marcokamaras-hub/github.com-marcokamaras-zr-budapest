@@ -345,6 +345,7 @@ export default function Shop() {
     try { return JSON.parse(localStorage.getItem('zr_recently_viewed')) || [] } catch { return [] }
   })
   const [showBackToTop, setShowBackToTop]     = useState(false)
+  const [openLegal, setOpenLegal]             = useState(null)
   const tabsContainerRef   = useRef(null)
   const productGridRef     = useRef(null)
   const touchStartX        = useRef(null)
@@ -1119,59 +1120,125 @@ export default function Shop() {
       </main>
 
       {/* ── Footer ── */}
-      <footer className="bg-[#2F4E3C] text-white px-4 py-6 lg:px-8">
-        <div className="max-w-6xl mx-auto grid grid-cols-3 gap-4 items-center">
+      <footer className="bg-[#2F4E3C] text-white px-4 pt-4 pb-36 md:py-5 lg:px-8">
 
-          {/* Left — Contact */}
+        {/* Desktop: 3-col */}
+        <div className="hidden md:grid max-w-6xl mx-auto grid-cols-3 gap-4 items-center">
           <div>
-            <p className="text-[9px] md:text-[11px] tracking-[0.2em] mb-3 text-white/50 uppercase">{t('contact')}</p>
-            <a
-              href="mailto:contact@zrbudapest.store"
-              className="block text-[11px] md:text-[15px] font-light tracking-wide text-white/70 hover:text-white transition-colors"
-            >
-              contact@zrbudapest.store
-            </a>
-            <a
-              href="tel:+3617049973"
-              className="block text-[11px] md:text-[15px] font-light tracking-wide text-white/70 hover:text-white transition-colors mt-1"
-            >
-              +36 1 704 9973
-            </a>
+            <p className="text-[9px] tracking-[0.15em] mb-1.5 text-white/50 uppercase">{t('contact')}</p>
+            <a href="mailto:contact@zrbudapest.store" className="block text-[10px] font-light text-white/70 hover:text-white transition-colors">contact@zrbudapest.store</a>
+            <a href="tel:+3617049973" className="block text-[10px] font-light text-white/70 hover:text-white transition-colors mt-0.5">+36 1 704 9973</a>
           </div>
-
-          {/* Centre — Logo + address + tagline (mirrors header centre, 85% scale) */}
           <div className="text-center">
-            <img
-              src="https://mbbxrfjgqvximrbumbop.supabase.co/storage/v1/object/public/public/images/zrlogo_clean.png"
-              alt="PERFUMERIE ZIELINSKI & ROZEN"
-              className="h-[98px] md:h-[131px] w-auto mx-auto brightness-0 invert"
-            />
-            <a
-              href="https://www.google.com/maps/dir/?api=1&destination=Sz%C3%A9kely+Mih%C3%A1ly+u.+4%2C+1061+Budapest"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block text-white/80 hover:text-white text-center text-[11px] md:text-[15px] font-light normal-case tracking-[0.04em] md:tracking-[0.15em] px-1 -mt-4 md:mt-1 transition-colors"
-            >
-              Budapest · Székely Mihály u. 4, 1061 <MapPin className="inline-block w-3.5 h-3.5 md:w-4 md:h-4 ml-0.5 mb-0.5 text-white/70" />
-              <span className="block text-white/60 text-[9px] md:text-[12px] tracking-wide mt-0.5">{t('tagline')}</span>
+            <img src="https://mbbxrfjgqvximrbumbop.supabase.co/storage/v1/object/public/public/images/zrlogo_clean.png" alt="PERFUMERIE ZIELINSKI & ROZEN" className="h-[72px] w-auto mx-auto brightness-0 invert" />
+            <a href="https://www.google.com/maps/dir/?api=1&destination=Sz%C3%A9kely+Mih%C3%A1ly+u.+4%2C+1061+Budapest" target="_blank" rel="noopener noreferrer" className="block text-white/80 hover:text-white text-[10px] font-light normal-case tracking-wide -mt-1.5 transition-colors">
+              Budapest · Székely Mihály u. 4, 1061 <MapPin className="inline-block w-2.5 h-2.5 ml-0.5 mb-0.5 text-white/70" />
+              <span className="block text-white/50 text-[9px] tracking-wide mt-0.5">{t('tagline')}</span>
             </a>
           </div>
-
-          {/* Right — Free delivery + HORECA */}
           <div className="text-right">
-            <p className="text-[9px] md:text-[11px] tracking-[0.2em] mb-3 text-white/50 uppercase">
-              {t('free_delivery_banner', currency === 'EUR' ? '€100' : '39 500 Ft')}
-            </p>
-            <p className="text-[9px] md:text-[11px] tracking-[0.2em] text-white/50 uppercase">HORECA &amp; HOSPITALITY</p>
-            <a
-              href="mailto:contact@zrbudapest.store"
-              className="block text-[11px] md:text-[15px] font-light tracking-wide text-white/70 hover:text-white transition-colors mt-1"
-            >
-              contact@zrbudapest.store
+            <p className="text-[9px] tracking-[0.1em] mb-1.5 text-white/50 uppercase">{t('free_delivery_banner', currency === 'EUR' ? '€100' : '39 500 Ft')}</p>
+            <p className="text-[9px] tracking-[0.1em] text-white/50 uppercase">HORECA &amp; HOSPITALITY</p>
+            <a href="mailto:contact@zrbudapest.store" className="block text-[10px] font-light text-white/70 hover:text-white transition-colors mt-0.5">contact@zrbudapest.store</a>
+          </div>
+        </div>
+
+        {/* Mobile: compact centred block + info grid */}
+        <div className="md:hidden">
+          <div className="text-center">
+            <img src="https://mbbxrfjgqvximrbumbop.supabase.co/storage/v1/object/public/public/images/zrlogo_clean.png" alt="PERFUMERIE ZIELINSKI & ROZEN" className="h-14 w-auto mx-auto brightness-0 invert" />
+            <a href="https://www.google.com/maps/dir/?api=1&destination=Sz%C3%A9kely+Mih%C3%A1ly+u.+4%2C+1061+Budapest" target="_blank" rel="noopener noreferrer" className="block text-white/80 hover:text-white text-[11px] font-light tracking-wide -mt-1 transition-colors">
+              Budapest · Székely Mihály u. 4, 1061 <MapPin className="inline-block w-3 h-3 ml-0.5 mb-0.5 text-white/70" />
+              <span className="block text-white/50 text-[9px] tracking-wide mt-0.5">{t('tagline')}</span>
             </a>
           </div>
-
+          <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-x-4">
+            <div>
+              <p className="text-[9px] tracking-[0.15em] mb-1.5 text-white/50 uppercase">{t('contact')}</p>
+              <a href="mailto:contact@zrbudapest.store" className="block text-[10px] font-light text-white/70 hover:text-white transition-colors">contact@zrbudapest.store</a>
+              <a href="tel:+3617049973" className="block text-[10px] font-light text-white/70 hover:text-white transition-colors mt-0.5">+36 1 704 9973</a>
+            </div>
+            <div className="text-right">
+              <p className="text-[9px] tracking-[0.1em] mb-1.5 text-white/50 uppercase">{t('free_delivery_banner', currency === 'EUR' ? '€100' : '39 500 Ft')}</p>
+              <p className="text-[9px] tracking-[0.1em] text-white/50 uppercase">HORECA &amp; HOSPITALITY</p>
+              <a href="mailto:contact@zrbudapest.store" className="block text-[10px] font-light text-white/70 hover:text-white transition-colors mt-0.5">contact@zrbudapest.store</a>
+            </div>
+          </div>
         </div>
+
+        {/* ── Legal links ── */}
+        <div className="mt-6 pt-4 border-t border-white/10">
+          <div className="flex justify-center gap-6">
+            {[
+              { key: 'aszf', label: 'ÁSZF' },
+              { key: 'privacy', label: 'Adatkezelés' },
+              { key: 'impressum', label: 'Impressum' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setOpenLegal(openLegal === key ? null : key)}
+                className="text-[9px] tracking-[0.15em] text-white/40 hover:text-white/70 transition-colors uppercase"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <AnimatePresence mode="wait">
+            {openLegal && (
+              <motion.div
+                key={openLegal}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="overflow-hidden"
+              >
+                <div className="pt-5 text-white/70 text-[10px] leading-relaxed max-w-2xl mx-auto space-y-3">
+
+                  {openLegal === 'impressum' && (<>
+                    <p className="text-[9px] tracking-[0.2em] text-white/40 uppercase mb-2">Impressum</p>
+                    <p><strong className="text-white/60">Üzemeltető:</strong> SANE STUDIO KFT</p>
+                    <p><strong className="text-white/60">Székhely:</strong> Székely Mihály u. 4, 1061 Budapest</p>
+                    <p><strong className="text-white/60">Cégjegyzékszám:</strong> 01 09 442468</p>
+                    <p><strong className="text-white/60">Adószám:</strong> 32784585-2-42</p>
+                    <p><strong className="text-white/60">E-mail:</strong> contact@zrbudapest.store</p>
+                    <p><strong className="text-white/60">Telefon:</strong> +36 1 704 9973</p>
+                    <p><strong className="text-white/60">Tárhelyszolgáltató:</strong> Vercel Inc., 340 Pine St #4B, San Francisco, CA 94104, USA</p>
+                  </>)}
+
+                  {openLegal === 'aszf' && (<>
+                    <p className="text-[9px] tracking-[0.2em] text-white/40 uppercase mb-2">Általános Szerződési Feltételek</p>
+                    <p><strong className="text-white/60">1. Eladó adatai</strong><br />SANE STUDIO KFT · Székely Mihály u. 4, 1061 Budapest · contact@zrbudapest.store</p>
+                    <p><strong className="text-white/60">2. Megrendelés menete</strong><br />A terméket kosárba helyezve, majd a „Megrendelés leadása fizetési kötelezettséggel" gomb megnyomásával adható le megrendelés. A megrendelés visszaigazolása 48 órán belül e-mailben történik.</p>
+                    <p><strong className="text-white/60">3. Fizetés és átvétel</strong><br />Fizetés bankkártyával (Revolut) lehetséges. Az áru click &amp; collect formában, illetve személyes kézbesítéssel elérhető Budapest és Pest vármegye területén, hetente kétszer.</p>
+                    <p><strong className="text-white/60">4. Elállási jog</strong><br />Az áru kézhezvételétől számított 14 napon belül indoklás nélkül elállhat a vásárlás from a 45/2014. (II.26.) Korm. rendelet alapján. Az elállást a contact@zrbudapest.store e-mail-círe kell bejelenteni. A visszatérítés az elállástól számított 14 napon belül történik.<br /><em>Kivétel:</em> Bontott/felbontott higiéniai és kozmetikai termékekre (parfüm, testápoló, kézápoló stb.) az elállási jog nem alkalmazható egészségvédelmi, illetve higiéniai okokból.</p>
+                    <p><strong className="text-white/60">5. Kellékszavatosság</strong><br />Hibás teljesítés esetén a Ptk. alapján 2 éves kellékszavatossági igény érvényesíthető.</p>
+                    <p><strong className="text-white/60">6. Panaszkezelés</strong><br />Panasz benyújtható a contact@zrbudapest.store e-mail-címen. Írásban benyújtott panaszra 30 napon belül, érdemi választ adunk. A panaszokat 5 évig megőrizzük.</p>
+                    <p><strong className="text-white/60">7. Békéltető testület</strong><br />Fogyasztói jogvita esetén a Budapesti Békéltető Testülethez fordulhat: 1016 Budapest, Krisztina krt. 99. I. em. 111. · bekelteto.testulet@bkik.hu · +36 (1) 488-2131 · bekeltet.bkik.hu</p>
+                    <p><strong className="text-white/60">8. Vitarendezés</strong><br />Online vitarendezési platform: <a href="https://consumer-redress.ec.europa.eu/dispute-resolution-bodies" target="_blank" rel="noopener noreferrer" className="underline hover:text-white">consumer-redress.ec.europa.eu</a></p>
+                  </>)}
+
+                  {openLegal === 'privacy' && (<>
+                    <p className="text-[9px] tracking-[0.2em] text-white/40 uppercase mb-2">Adatkezelési Tájékoztató</p>
+                    <p><strong className="text-white/60">Adatkezelő:</strong> SANE STUDIO KFT · contact@zrbudapest.store</p>
+                    <p><strong className="text-white/60">Kezelt adatok és célok:</strong><br />
+                      — Rendelés teljesítése: név, e-mail, telefonszám, szállítási adatok (jogalap: szerződés teljesítése, megőrzés: 5 év)<br />
+                      — Számlázás: számlán szereplő adatok (jogalap: jogi kötelezettség – ÁFA tv., megőrzés: 8 év)<br />
+                      — Hírlevél/marketing: e-mail (jogalap: hozzájárulás, visszavonható bármikor)
+                    </p>
+                    <p><strong className="text-white/60">Adatfeldolgozók:</strong> Vercel Inc. (tárhely) · Supabase Inc. (adatbázis) · Revolut Ltd. (fizetés) · Resend Inc. (e-mail) · KBOSS.hu Kft. / Számlázz.hu (számlázás)</p>
+                    <p><strong className="text-white/60">Az Ön jogai:</strong> hozzáférés · helyesbítés · törlés · adathordozhatóság · tiltakozás · hozzájárulás visszavonása · korlátozás kérése</p>
+                    <p><strong className="text-white/60">Jogorvoslat:</strong> Nemzeti Adatvédelmi és Információszabadság Hatóság (NAIH) · 1055 Budapest, Falk Miksa u. 9–11. · ugyfelszolgalat@naih.hu · naih.hu</p>
+                    <p><strong className="text-white/60">Sütik (cookie-k):</strong> A weboldal munkamenet-sütiket (kosár, beállítások) használ, amelyek a böngésző bezárásáig aktívak. Statisztikai sütikhez hozzájárulás szükséges.</p>
+                  </>)}
+
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
       </footer>
 
       {/* Admin link — bottom-left on desktop, above mobile nav on mobile */}
