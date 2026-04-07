@@ -171,19 +171,33 @@ export default function Admin() {
     setCsvImporting(true)
     try {
       const text = await file.text()
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+      const lines = text.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean)
       if (lines.length < 2) throw new Error('CSV appears empty')
 
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''))
-      const skuIdx   = headers.findIndex(h => ['sku', 'item_code', 'reference', 'code'].includes(h))
-      const eanIdx   = headers.findIndex(h => ['ean', 'barcode', 'upc', 'ean13'].includes(h))
-      const stockIdx = headers.findIndex(h => ['stock', 'quantity', 'qty', 'available', 'inventory'].includes(h))
+      // RFC 4180-compliant CSV parser (handles quoted fields with commas)
+      const parseCsvLine = (line) => {
+        const cols = []
+        let cur = '', inQuotes = false
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i]
+          if (ch === '"') { inQuotes = !inQuotes }
+          else if (ch === ',' && !inQuotes) { cols.push(cur.trim()); cur = '' }
+          else { cur += ch }
+        }
+        cols.push(cur.trim())
+        return cols
+      }
 
-      if (stockIdx === -1) throw new Error('No stock/quantity column found — expected: stock, quantity, or qty')
+      const headers = parseCsvLine(lines[0]).map(h => h.toLowerCase())
+      const skuIdx   = headers.findIndex(h => ['sku', 'custom sku', 'item_code', 'reference', 'code', 'manufact. sku'].includes(h))
+      const eanIdx   = headers.findIndex(h => ['ean', 'barcode', 'upc', 'ean13'].includes(h))
+      const stockIdx = headers.findIndex(h => ['stock', 'quantity', 'qty', 'available', 'inventory', 'remaining'].includes(h))
+
+      if (stockIdx === -1) throw new Error('No stock/quantity column found — expected: stock, quantity, qty, or remaining')
       if (skuIdx === -1 && eanIdx === -1) throw new Error('No SKU or EAN column found — expected: sku, ean, or barcode')
 
       const rows = lines.slice(1).map(line => {
-        const cols = line.split(',').map(c => c.trim().replace(/"/g, ''))
+        const cols = parseCsvLine(line)
         return {
           sku:   skuIdx  !== -1 ? cols[skuIdx]  : null,
           ean:   eanIdx  !== -1 ? cols[eanIdx]  : null,
