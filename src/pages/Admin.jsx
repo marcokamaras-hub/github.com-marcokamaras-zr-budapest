@@ -226,10 +226,18 @@ export default function Admin() {
     }
   }
 
-  const filteredProducts = products.filter(p =>
-    p.name?.toLowerCase().includes(search.toLowerCase()) ||
-    p.sku?.toLowerCase().includes(search.toLowerCase())
-  )
+  const [stockSort, setStockSort] = useState(null) // null | 'asc' | 'desc'
+
+  const filteredProducts = products
+    .filter(p =>
+      p.name?.toLowerCase().includes(search.toLowerCase()) ||
+      p.sku?.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (stockSort === 'asc')  return (a.stock ?? 0) - (b.stock ?? 0)
+      if (stockSort === 'desc') return (b.stock ?? 0) - (a.stock ?? 0)
+      return 0
+    })
 
   const filteredOrders = statusFilter === 'all' ? orders : orders.filter(o => o.status === statusFilter)
 
@@ -321,7 +329,17 @@ export default function Admin() {
                           <TableHead>SKU</TableHead>
                           <TableHead>Category</TableHead>
                           <TableHead>Price</TableHead>
-                          <TableHead>Stock</TableHead>
+                          <TableHead>
+                            <button
+                              onClick={() => setStockSort(s => s === 'asc' ? 'desc' : 'asc')}
+                              className="flex items-center gap-1 hover:text-black transition-colors"
+                            >
+                              Stock
+                              <span className="text-xs text-stone-400">
+                                {stockSort === 'asc' ? '↑' : stockSort === 'desc' ? '↓' : '↕'}
+                              </span>
+                            </button>
+                          </TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead></TableHead>
                         </TableRow>
