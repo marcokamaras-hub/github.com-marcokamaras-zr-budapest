@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Package, ShoppingCart, Euro, AlertCircle, Plus, Pencil, Search, Clock, Truck, CheckCircle2, XCircle, Upload, LogOut } from 'lucide-react'
+import { Package, ShoppingCart, Euro, AlertCircle, Plus, Pencil, Search, Clock, Truck, CheckCircle2, XCircle, Upload, LogOut, ChevronDown, ChevronUp, MapPin, Mail, Phone, CalendarDays } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabaseClient'
@@ -226,7 +226,8 @@ export default function Admin() {
     }
   }
 
-  const [stockSort, setStockSort] = useState(null) // null | 'asc' | 'desc'
+  const [stockSort, setStockSort]         = useState(null) // null | 'asc' | 'desc'
+  const [expandedOrderId, setExpandedOrderId] = useState(null)
 
   const filteredProducts = products
     .filter(p =>
@@ -415,41 +416,105 @@ export default function Admin() {
                         {filteredOrders.map(order => {
                           const status     = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending
                           const StatusIcon = status.icon
+                          const isExpanded = expandedOrderId === order.id
                           return (
-                            <TableRow key={order.id}>
-                              <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
-                              <TableCell>
-                                <div>
-                                  <p className="font-medium">{order.customer_name}</p>
-                                  <p className="text-xs text-stone-500">{order.customer_phone}</p>
-                                </div>
-                              </TableCell>
-                              <TableCell>{order.items?.length || 0} items</TableCell>
-                              <TableCell className="font-medium">€{Number(order.total).toFixed(2)}</TableCell>
-                              <TableCell>
-                                <Badge className={order.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}>
-                                  {order.payment_status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={`${status.color} border-0`}>
-                                  <StatusIcon className="w-3 h-3 mr-1" />{status.label}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-stone-500 text-sm">
-                                {order.created_at ? format(new Date(order.created_at), 'MMM d, HH:mm') : '-'}
-                              </TableCell>
-                              <TableCell>
-                                <Select value={order.status} onValueChange={v => updateOrderMutation.mutate({ id: order.id, data: { status: v } })}>
-                                  <SelectTrigger className="w-32 h-8"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    {Object.entries(STATUS_CONFIG).map(([key, { label }]) => (
-                                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                            </TableRow>
+                            <React.Fragment key={order.id}>
+                              <TableRow
+                                className="cursor-pointer hover:bg-stone-50"
+                                onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                              >
+                                <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
+                                <TableCell>
+                                  <div>
+                                    <p className="font-medium">{order.customer_name}</p>
+                                    <p className="text-xs text-stone-500">{order.customer_phone}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell>{order.items?.length || 0} items</TableCell>
+                                <TableCell className="font-medium">€{Number(order.total).toFixed(2)}</TableCell>
+                                <TableCell>
+                                  <Badge className={order.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}>
+                                    {order.payment_status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={`${status.color} border-0`}>
+                                    <StatusIcon className="w-3 h-3 mr-1" />{status.label}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-stone-500 text-sm">
+                                  {order.created_at ? format(new Date(order.created_at), 'MMM d, HH:mm') : '-'}
+                                </TableCell>
+                                <TableCell onClick={e => e.stopPropagation()} className="flex items-center gap-2">
+                                  <Select value={order.status} onValueChange={v => updateOrderMutation.mutate({ id: order.id, data: { status: v } })}>
+                                    <SelectTrigger className="w-32 h-8"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      {Object.entries(STATUS_CONFIG).map(([key, { label }]) => (
+                                        <SelectItem key={key} value={key}>{label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {isExpanded ? <ChevronUp className="w-4 h-4 text-stone-400" /> : <ChevronDown className="w-4 h-4 text-stone-400" />}
+                                </TableCell>
+                              </TableRow>
+
+                              {isExpanded && (
+                                <TableRow className="bg-stone-50 hover:bg-stone-50">
+                                  <TableCell colSpan={8} className="p-0">
+                                    <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-stone-100">
+
+                                      {/* Customer info */}
+                                      <div>
+                                        <p className="text-[10px] tracking-widest text-stone-400 uppercase mb-2">Customer</p>
+                                        <div className="space-y-1.5 text-sm">
+                                          <p className="flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-stone-400" />{order.customer_email || '—'}</p>
+                                          <p className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-stone-400" />{order.customer_phone || '—'}</p>
+                                          <p className="flex items-center gap-2"><CalendarDays className="w-3.5 h-3.5 text-stone-400" />
+                                            {order.delivery_method === 'pickup' ? 'Click & Collect' : 'Delivery'} · {order.delivery_date || '—'}
+                                          </p>
+                                          {order.delivery_method !== 'pickup' && (
+                                            <p className="flex items-start gap-2"><MapPin className="w-3.5 h-3.5 text-stone-400 mt-0.5 shrink-0" />
+                                              <span>{[order.delivery_address, order.delivery_postal_code, order.delivery_city].filter(Boolean).join(', ')}</span>
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Items */}
+                                      <div>
+                                        <p className="text-[10px] tracking-widest text-stone-400 uppercase mb-2">Items</p>
+                                        <div className="space-y-1">
+                                          {(order.items || []).map((item, i) => (
+                                            <div key={i} className="flex justify-between text-sm">
+                                              <span className="text-stone-700">{item.product_name} <span className="text-stone-400">×{item.quantity}</span></span>
+                                              <span className="text-stone-500">€{(item.price * item.quantity).toFixed(2)}</span>
+                                            </div>
+                                          ))}
+                                          <div className="flex justify-between text-sm pt-1 border-t border-stone-200 mt-1">
+                                            <span className="text-stone-400">Delivery fee</span>
+                                            <span className="text-stone-500">€{Number(order.delivery_fee || 0).toFixed(2)}</span>
+                                          </div>
+                                          <div className="flex justify-between text-sm font-semibold">
+                                            <span>Total</span>
+                                            <span>€{Number(order.total).toFixed(2)}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Notes */}
+                                      <div>
+                                        <p className="text-[10px] tracking-widest text-stone-400 uppercase mb-2">Notes</p>
+                                        <p className="text-sm text-stone-600 whitespace-pre-wrap">{order.notes || '—'}</p>
+                                        {order.revolut_order_id && (
+                                          <p className="text-[10px] text-stone-400 mt-2">Revolut: {order.revolut_order_id}</p>
+                                        )}
+                                      </div>
+
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </React.Fragment>
                           )
                         })}
                       </TableBody>
